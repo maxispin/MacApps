@@ -33,6 +33,36 @@ class AppScanner {
         return apps.sorted { $0.name.lowercased() < $1.name.lowercased() }
     }
 
+    // Fast scan without icons for quick initial display
+    func scanApplicationsWithoutIcons() -> [AppInfo] {
+        let fileManager = FileManager.default
+        let applicationsPath = "/Applications"
+
+        guard let contents = try? fileManager.contentsOfDirectory(atPath: applicationsPath) else {
+            return []
+        }
+
+        var apps: [AppInfo] = []
+
+        for item in contents where item.hasSuffix(".app") {
+            let appPath = "\(applicationsPath)/\(item)"
+            let appName = String(item.dropLast(4))
+
+            let bundleId = getBundleIdentifier(appPath: appPath)
+            let existingComment = getFinderComment(path: appPath)
+
+            apps.append(AppInfo(
+                name: appName,
+                path: appPath,
+                bundleIdentifier: bundleId,
+                finderComment: existingComment,
+                icon: nil  // Skip icon loading for fast startup
+            ))
+        }
+
+        return apps.sorted { $0.name.lowercased() < $1.name.lowercased() }
+    }
+
     private func getBundleIdentifier(appPath: String) -> String? {
         let plistPath = "\(appPath)/Contents/Info.plist"
         guard let plistData = FileManager.default.contents(atPath: plistPath),

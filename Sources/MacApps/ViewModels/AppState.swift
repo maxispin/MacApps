@@ -72,29 +72,48 @@ class AppState: ObservableObject {
         database.hasCachedData()
     }
 
+    // Fast startup: load data first, then icons in background
     func loadFromCache() async {
         scanStatus = .scanning
 
         let cached = database.load()
         if !cached.isEmpty {
-            var loadedApps: [AppInfo] = []
-            for stored in cached {
-                let icon = await Task.detached(priority: .userInitiated) {
-                    NSWorkspace.shared.icon(forFile: stored.path)
-                }.value
-
-                loadedApps.append(AppInfo(
+            // First: Load apps immediately WITHOUT icons (fast)
+            let loadedApps: [AppInfo] = cached.map { stored in
+                AppInfo(
                     name: stored.name,
                     path: stored.path,
                     bundleIdentifier: stored.bundleIdentifier,
                     finderComment: stored.finderComment,
-                    icon: icon
-                ))
-            }
-            apps = loadedApps.sorted { $0.name.lowercased() < $1.name.lowercased() }
+                    icon: nil  // No icon yet
+                )
+            }.sorted { $0.name.lowercased() < $1.name.lowercased() }
+
+            apps = loadedApps
             scanStatus = .completed(count: apps.count)
+
+            // Then: Load icons in background
+            await loadIconsAsync()
         } else {
             await scanApplications()
+        }
+    }
+
+    // Load icons asynchronously after initial display
+    private func loadIconsAsync() async {
+        for (index, app) in apps.enumerated() {
+            let path = app.path
+            let icon = await Task.detached(priority: .background) {
+                NSWorkspace.shared.icon(forFile: path)
+            }.value
+
+            if index < apps.count && apps[index].path == path {
+                apps[index].icon = icon
+                // Update selected app if it's this one
+                if selectedApp?.path == path {
+                    selectedApp = apps[index]
+                }
+            }
         }
     }
 
@@ -102,13 +121,17 @@ class AppState: ObservableObject {
         scanStatus = .scanning
         apps = []
 
+        // Get app list quickly (without icons first)
         let scannedApps = await Task.detached(priority: .userInitiated) { [scanner] in
-            return scanner.scanApplications()
+            return scanner.scanApplicationsWithoutIcons()
         }.value
 
         apps = scannedApps
         scanStatus = .completed(count: scannedApps.count)
         database.save(apps: apps)
+
+        // Load icons in background
+        await loadIconsAsync()
     }
 
     func refreshApp(_ app: AppInfo) {
@@ -187,7 +210,7 @@ class AppState: ObservableObject {
         }
 
         var updated = 0
-        var skipped = 0
+        let skipped = 0
         var failed = 0
 
         for (index, app) in appsToUpdate.enumerated() {

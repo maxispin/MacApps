@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3.0] - 2024-12-24
+
+### Added
+- **Dock icon visibility**: App now appears in the Dock for easy access
+- **AppDelegate**: Proper application lifecycle management
+- **Bring to front on launch**: App activates and comes to front when launched
+
+### Changed
+- **Optimized startup performance**: App data loads immediately without icons, icons load asynchronously in background
+- **Faster cache loading**: Cached apps display instantly, then icons populate progressively
+- **Background icon loading**: Icons load in low-priority background tasks to not block UI
+
+### Fixed
+- App no longer gets lost behind other windows
+- Significantly reduced startup time when loading from cache
+
 ## [0.2.2.0] - 2024-12-24
 
 ### Added
@@ -162,6 +178,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.2.3.0 | 2024-12-24 | Dock icon, optimized startup, async icon loading |
 | 0.2.2.0 | 2024-12-24 | Version display, combined descriptions, real-time progress |
 | 0.2.1.0 | 2024-12-24 | Database caching, batch update dialog |
 | 0.2.0.0 | 2024-12-24 | SwiftUI GUI with expanded descriptions and search |

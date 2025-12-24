@@ -3,8 +3,9 @@ import SwiftUI
 @main
 struct MacAppsApp: App {
     @StateObject private var appState = AppState()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    static let version = "0.2.2.0"
+    static let version = "0.2.3.0"
     static let buildDate = "2024-12-24"
 
     var body: some Scene {
@@ -24,5 +25,18 @@ struct MacAppsApp: App {
                 .keyboardShortcut("r", modifiers: .command)
             }
         }
+    }
+}
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Ensure app appears in Dock
+        NSApp.setActivationPolicy(.regular)
+        // Bring to front
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return true
     }
 }
