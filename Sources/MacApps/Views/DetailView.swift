@@ -107,28 +107,70 @@ struct DescriptionSection: View {
     @Binding var showSuccess: Bool
     @Binding var showError: Bool
 
+    private func languageName(for code: String) -> String {
+        switch code {
+        case "fi": return "Suomi"
+        case "en": return "English"
+        case "sv": return "Svenska"
+        case "de": return "Deutsch"
+        case "fr": return "Français"
+        default: return code.uppercased()
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Finder Comment")
+            Text("Descriptions")
                 .font(.headline)
 
-            GroupBox {
-                if let comment = app.finderComment, !comment.isEmpty {
+            // Show descriptions for each language
+            if let descriptions = app.descriptions, !descriptions.isEmpty {
+                ForEach(descriptions, id: \.language) { desc in
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(languageName(for: desc.language))
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                                .fontWeight(.medium)
+
+                            if let short = desc.shortDescription {
+                                Text(short)
+                                    .fontWeight(.medium)
+                            }
+                            if let expanded = desc.expandedDescription {
+                                Text(expanded)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                    }
+                }
+            } else if let comment = app.finderComment, !comment.isEmpty {
+                GroupBox {
                     Text(comment)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .textSelection(.enabled)
-                } else {
+                }
+            } else {
+                GroupBox {
                     Text("No description set. Click 'Generate Description' to create one using AI.")
                         .foregroundColor(.secondary)
                         .italic()
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .frame(minHeight: 60)
 
-            Text("Generates both short and detailed descriptions for better Finder searchability")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            // Show missing languages
+            if !app.missingLanguages.isEmpty {
+                Text("Missing: \(app.missingLanguages.map { languageName(for: $0) }.joined(separator: ", "))")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+            } else if app.hasDescription {
+                Text("All languages fetched (\(AppDatabase.targetLanguages.map { languageName(for: $0) }.joined(separator: ", ")))")
+                    .font(.caption)
+                    .foregroundColor(.green)
+            }
 
             HStack {
                 Button(action: {

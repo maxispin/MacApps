@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0.0] - 2024-12-24
+
+### Added
+- **Multi-language descriptions**: Descriptions now fetched in system language + English
+  - Automatically detects system language (fi, sv, de, fr, etc.)
+  - English always fetched as secondary language (unless system is English)
+  - Each language stored separately in database
+- **LocalizedDescription model**: Stores short + expanded description per language
+- **All-language search**: Search matches text in ALL stored languages
+- **Language indicator in Detail view**: Shows which languages have been fetched
+- **Missing language warning**: Shows which languages still need to be fetched
+
+### Changed
+- Database schema extended with `descriptions` array for multi-language support
+- AppInfo model now has `descriptions`, `missingLanguages`, `hasAllLanguages` properties
+- `displayDescription` shows system language first, then English fallback
+- ClaudeService accepts language parameter for localized prompts
+- Detail view shows all language descriptions in separate boxes
+
+### Fixed
+- Descriptions no longer re-fetched if language already exists in database
+
 ## [0.2.6.0] - 2024-12-24
 
 ### Added
@@ -222,6 +244,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.3.0.0 | 2024-12-24 | Multi-language descriptions (system lang + English) |
 | 0.2.6.0 | 2024-12-24 | Menu bar app detection, indicator, and preferences |
 | 0.2.5.0 | 2024-12-24 | Fast parallel icon loading, UI refresh fix |
 | 0.2.4.0 | 2024-12-24 | IconManager with NSCache, double-click launch, lazy loading |

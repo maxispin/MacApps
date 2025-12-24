@@ -162,8 +162,8 @@ struct AppRowView: View {
                     .font(.headline)
                     .lineLimit(1)
 
-                if let comment = app.finderComment, !comment.isEmpty {
-                    Text(comment)
+                if let description = app.displayDescription, !description.isEmpty {
+                    Text(description)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(2)

@@ -14,24 +14,82 @@ class AppDatabase {
         return appFolder.appendingPathComponent("apps.json")
     }
 
+    /// Description stored for a specific language
+    struct LocalizedDescription: Codable {
+        let language: String  // e.g., "fi", "en", "sv"
+        let shortDescription: String?
+        let expandedDescription: String?
+        var fetchedAt: Date
+    }
+
     struct StoredApp: Codable {
         let path: String
         let name: String
         let bundleIdentifier: String?
-        var finderComment: String?
+        var finderComment: String?  // Keep for backwards compatibility (written to Finder)
         var lastScanned: Date
-        var isMenuBarApp: Bool?  // Optional for backwards compatibility
+        var isMenuBarApp: Bool?
+
+        // Multi-language descriptions
+        var descriptions: [LocalizedDescription]?
+
+        /// Get all descriptions combined for search
+        var allDescriptionsText: String {
+            guard let descriptions = descriptions else { return finderComment ?? "" }
+            let texts = descriptions.compactMap { desc -> String? in
+                var parts: [String] = []
+                if let short = desc.shortDescription { parts.append(short) }
+                if let expanded = desc.expandedDescription { parts.append(expanded) }
+                return parts.isEmpty ? nil : parts.joined(separator: " ")
+            }
+            return texts.joined(separator: " ")
+        }
+
+        /// Check if a specific language has been fetched
+        func hasDescription(for language: String) -> Bool {
+            descriptions?.contains { $0.language == language } ?? false
+        }
+
+        /// Get description for a specific language
+        func description(for language: String) -> LocalizedDescription? {
+            descriptions?.first { $0.language == language }
+        }
+    }
+
+    /// Get system language code (e.g., "fi", "en")
+    static var systemLanguage: String {
+        let preferred = Locale.preferredLanguages.first ?? "en"
+        // Extract just the language code (e.g., "fi" from "fi-FI")
+        return String(preferred.prefix(2))
+    }
+
+    /// Languages to fetch descriptions for
+    static var targetLanguages: [String] {
+        let system = systemLanguage
+        if system == "en" {
+            return ["en"]
+        } else {
+            return [system, "en"]
+        }
     }
 
     func save(apps: [AppInfo]) {
+        // Load existing to preserve descriptions
+        let existing = load()
+        let existingByPath = Dictionary(uniqueKeysWithValues: existing.map { ($0.path, $0) })
+
         let storedApps = apps.map { app in
-            StoredApp(
+            // Preserve existing descriptions if any
+            let existingDescriptions = existingByPath[app.path]?.descriptions
+
+            return StoredApp(
                 path: app.path,
                 name: app.name,
                 bundleIdentifier: app.bundleIdentifier,
                 finderComment: app.finderComment,
                 lastScanned: Date(),
-                isMenuBarApp: app.isMenuBarApp
+                isMenuBarApp: app.isMenuBarApp,
+                descriptions: app.descriptions ?? existingDescriptions
             )
         }
 
@@ -73,15 +131,59 @@ class AppDatabase {
             stored[index].finderComment = comment
             stored[index].lastScanned = Date()
 
-            do {
-                let encoder = JSONEncoder()
-                encoder.dateEncodingStrategy = .iso8601
-                encoder.outputFormatting = .prettyPrinted
-                let data = try encoder.encode(stored)
-                try data.write(to: databaseURL)
-            } catch {
-                print("Failed to update database: \(error)")
-            }
+            saveStored(stored)
+        }
+    }
+
+    /// Add or update description for a specific language
+    func updateDescription(for path: String, language: String, short: String?, expanded: String?) {
+        var stored = load()
+        guard let index = stored.firstIndex(where: { $0.path == path }) else { return }
+
+        let newDesc = LocalizedDescription(
+            language: language,
+            shortDescription: short,
+            expandedDescription: expanded,
+            fetchedAt: Date()
+        )
+
+        var descriptions = stored[index].descriptions ?? []
+
+        // Remove existing for this language and add new
+        descriptions.removeAll { $0.language == language }
+        descriptions.append(newDesc)
+
+        stored[index].descriptions = descriptions
+        stored[index].lastScanned = Date()
+
+        saveStored(stored)
+    }
+
+    /// Check which languages are missing for an app
+    func missingLanguages(for path: String) -> [String] {
+        let stored = load()
+        guard let app = stored.first(where: { $0.path == path }) else {
+            return Self.targetLanguages
+        }
+
+        return Self.targetLanguages.filter { !app.hasDescription(for: $0) }
+    }
+
+    /// Get all descriptions for search
+    func getAllDescriptionsText(for path: String) -> String {
+        let stored = load()
+        return stored.first { $0.path == path }?.allDescriptionsText ?? ""
+    }
+
+    private func saveStored(_ stored: [StoredApp]) {
+        do {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = .prettyPrinted
+            let data = try encoder.encode(stored)
+            try data.write(to: databaseURL)
+        } catch {
+            print("Failed to update database: \(error)")
         }
     }
 

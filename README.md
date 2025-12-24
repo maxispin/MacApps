@@ -3,7 +3,7 @@
 [![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2014+-blue.svg)](https://www.apple.com/macos)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.2.6.0-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-0.3.0.0-brightgreen.svg)](CHANGELOG.md)
 
 A native macOS application that automatically generates and adds descriptive Finder comments to applications using Claude AI. Search for applications by their functionality directly in Finder.
 

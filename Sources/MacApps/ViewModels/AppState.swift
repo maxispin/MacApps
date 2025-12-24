@@ -43,9 +43,12 @@ class AppState: ObservableObject {
         if !searchText.isEmpty {
             let query = searchText.lowercased()
             result = result.filter { app in
+                // Search in name
                 app.name.lowercased().contains(query) ||
-                (app.finderComment?.lowercased().contains(query) ?? false) ||
-                (app.bundleIdentifier?.lowercased().contains(query) ?? false)
+                // Search in bundle ID
+                (app.bundleIdentifier?.lowercased().contains(query) ?? false) ||
+                // Search in ALL language descriptions
+                app.allDescriptionsText.lowercased().contains(query)
             }
         }
 
@@ -86,7 +89,8 @@ class AppState: ObservableObject {
                     bundleIdentifier: stored.bundleIdentifier,
                     finderComment: stored.finderComment,
                     icon: nil,
-                    isMenuBarApp: stored.isMenuBarApp ?? false
+                    isMenuBarApp: stored.isMenuBarApp ?? false,
+                    descriptions: stored.descriptions
                 )
             }.sorted { $0.name.lowercased() < $1.name.lowercased() }
 
@@ -133,56 +137,98 @@ class AppState: ObservableObject {
         }
     }
 
-    // Update single app with both short + expanded descriptions
+    // Update single app with descriptions for all target languages
     func updateSingleApp(_ app: AppInfo) async {
-        currentUpdateText = "Generating description for \(app.name)..."
+        currentUpdateText = "Generating descriptions for \(app.name)..."
 
-        let description = await generateCombinedDescription(for: app)
+        let result = await generateMultiLanguageDescriptions(for: app)
 
-        if let desc = description {
-            let success = writer.setFinderComment(path: app.path, comment: desc)
-            if success {
-                if let index = apps.firstIndex(where: { $0.path == app.path }) {
-                    apps[index].finderComment = desc
-                    if selectedApp?.path == app.path {
-                        selectedApp = apps[index]
-                    }
-                    database.updateComment(for: app.path, comment: desc)
+        if let index = apps.firstIndex(where: { $0.path == app.path }) {
+            // Update descriptions in memory
+            apps[index].descriptions = result.descriptions
+
+            // Write primary description to Finder comment
+            if let finderComment = result.finderComment {
+                let success = writer.setFinderComment(path: app.path, comment: finderComment)
+                if success {
+                    apps[index].finderComment = finderComment
+                    database.updateComment(for: app.path, comment: finderComment)
                 }
-                lastGeneratedDescription = desc
+                lastGeneratedDescription = finderComment
+            }
+
+            if selectedApp?.path == app.path {
+                selectedApp = apps[index]
             }
         }
 
         currentUpdateText = ""
     }
 
-    // Generate combined description (short + expanded)
-    private func generateCombinedDescription(for app: AppInfo) async -> String? {
+    // Generate descriptions for all target languages
+    private func generateMultiLanguageDescriptions(for app: AppInfo) async -> (finderComment: String?, descriptions: [AppDatabase.LocalizedDescription]) {
         let appName = app.name
         let bundleId = app.bundleIdentifier
+        let missingLanguages = app.missingLanguages
 
-        // Get short description
-        currentUpdateText = "[\(appName)] Getting short description..."
-        let shortDesc: String? = await Task.detached(priority: .userInitiated) { [claude] in
-            return claude.getDescription(for: appName, bundleId: bundleId, type: .short)
-        }.value
+        var allDescriptions = app.descriptions ?? []
+        var primaryDescription: String? = nil
 
-        guard let short = shortDesc else { return nil }
-        lastGeneratedDescription = short
+        for language in missingLanguages {
+            let langName = language == "en" ? "English" : (language == "fi" ? "Finnish" : language.uppercased())
 
-        // Get expanded description
-        currentUpdateText = "[\(appName)] Getting detailed description..."
-        let expandedDesc: String? = await Task.detached(priority: .userInitiated) { [claude] in
-            return claude.getDescription(for: appName, bundleId: bundleId, type: .expanded)
-        }.value
+            // Get short description
+            currentUpdateText = "[\(appName)] Getting \(langName) short description..."
+            let shortDesc: String? = await Task.detached(priority: .userInitiated) { [claude] in
+                return claude.getDescription(for: appName, bundleId: bundleId, type: .short, language: language)
+            }.value
 
-        guard let expanded = expandedDesc else { return short }
+            guard let short = shortDesc else { continue }
+            lastGeneratedDescription = "[\(langName)] \(short)"
 
-        // Combine: Short summary first, then detailed
-        let combined = "\(short) | \(expanded)"
-        lastGeneratedDescription = combined
+            // Get expanded description
+            currentUpdateText = "[\(appName)] Getting \(langName) detailed description..."
+            let expandedDesc: String? = await Task.detached(priority: .userInitiated) { [claude] in
+                return claude.getDescription(for: appName, bundleId: bundleId, type: .expanded, language: language)
+            }.value
 
-        return combined
+            let expanded = expandedDesc
+
+            // Store this language's description
+            let localizedDesc = AppDatabase.LocalizedDescription(
+                language: language,
+                shortDescription: short,
+                expandedDescription: expanded,
+                fetchedAt: Date()
+            )
+            allDescriptions.removeAll { $0.language == language }
+            allDescriptions.append(localizedDesc)
+
+            // Save to database immediately
+            database.updateDescription(for: app.path, language: language, short: short, expanded: expanded)
+
+            // Use system language (or English if system) for Finder comment
+            let systemLang = AppDatabase.systemLanguage
+            if language == systemLang || (language == "en" && primaryDescription == nil) {
+                if let exp = expanded {
+                    primaryDescription = "\(short) | \(exp)"
+                } else {
+                    primaryDescription = short
+                }
+                lastGeneratedDescription = primaryDescription ?? short
+            }
+
+            // Small delay between languages
+            try? await Task.sleep(nanoseconds: 200_000_000)
+        }
+
+        return (primaryDescription, allDescriptions)
+    }
+
+    // Legacy method for backwards compatibility
+    private func generateCombinedDescription(for app: AppInfo) async -> String? {
+        let result = await generateMultiLanguageDescriptions(for: app)
+        return result.finderComment
     }
 
     func updateAllDescriptions(onlyMissing: Bool) async {
