@@ -20,6 +20,7 @@ class AppDatabase {
         let bundleIdentifier: String?
         var finderComment: String?
         var lastScanned: Date
+        var isMenuBarApp: Bool?  // Optional for backwards compatibility
     }
 
     func save(apps: [AppInfo]) {
@@ -29,7 +30,8 @@ class AppDatabase {
                 name: app.name,
                 bundleIdentifier: app.bundleIdentifier,
                 finderComment: app.finderComment,
-                lastScanned: Date()
+                lastScanned: Date(),
+                isMenuBarApp: app.isMenuBarApp
             )
         }
 

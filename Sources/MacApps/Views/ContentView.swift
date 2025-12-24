@@ -177,6 +177,14 @@ struct AppRowView: View {
 
             Spacer()
 
+            // Menu bar app indicator
+            if app.isMenuBarApp {
+                Image(systemName: "menubar.rectangle")
+                    .foregroundColor(.blue)
+                    .font(.caption)
+                    .help("Menu bar app")
+            }
+
             // Status indicator
             if app.hasDescription {
                 Image(systemName: "checkmark.circle.fill")
@@ -209,6 +217,11 @@ struct AppRowView: View {
             }
             Button("Launch App") {
                 appState.launchApp(app)
+            }
+            if app.isMenuBarApp {
+                Button("Open Preferences") {
+                    appState.openAppPreferences(app)
+                }
             }
             Divider()
             Button("Generate Description") {

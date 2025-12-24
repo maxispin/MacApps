@@ -78,13 +78,18 @@ struct AppHeaderView: View {
                         .textSelection(.enabled)
                 }
 
-                HStack {
+                HStack(spacing: 12) {
                     if app.hasDescription {
                         Label("Has Description", systemImage: "checkmark.circle.fill")
                             .foregroundColor(.green)
                     } else {
                         Label("No Description", systemImage: "exclamationmark.circle.fill")
                             .foregroundColor(.orange)
+                    }
+
+                    if app.isMenuBarApp {
+                        Label("Menu Bar App", systemImage: "menubar.rectangle")
+                            .foregroundColor(.blue)
                     }
                 }
                 .font(.caption)
@@ -234,6 +239,12 @@ struct ActionsSection: View {
             HStack(spacing: 12) {
                 Button(action: { appState.launchApp(app) }) {
                     Label("Launch", systemImage: "play.fill")
+                }
+
+                if app.isMenuBarApp {
+                    Button(action: { appState.openAppPreferences(app) }) {
+                        Label("Open Preferences", systemImage: "gearshape")
+                    }
                 }
 
                 Button(action: { appState.openInFinder(app) }) {

@@ -85,7 +85,8 @@ class AppState: ObservableObject {
                     path: stored.path,
                     bundleIdentifier: stored.bundleIdentifier,
                     finderComment: stored.finderComment,
-                    icon: nil
+                    icon: nil,
+                    isMenuBarApp: stored.isMenuBarApp ?? false
                 )
             }.sorted { $0.name.lowercased() < $1.name.lowercased() }
 
@@ -254,6 +255,62 @@ class AppState: ObservableObject {
     }
 
     func launchApp(_ app: AppInfo) {
-        NSWorkspace.shared.open(URL(fileURLWithPath: app.path))
+        let url = URL(fileURLWithPath: app.path)
+
+        if app.isMenuBarApp {
+            // For menu bar apps, use special launch configuration
+            let config = NSWorkspace.OpenConfiguration()
+            config.activates = true
+            config.hides = false
+
+            NSWorkspace.shared.openApplication(at: url, configuration: config) { runningApp, error in
+                if let runningApp = runningApp {
+                    // Try to activate the app and bring any windows to front
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        runningApp.activate()
+                    }
+                }
+            }
+        } else {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    /// Open preferences/settings window for menu bar apps
+    func openAppPreferences(_ app: AppInfo) {
+        guard let bundleId = app.bundleIdentifier else { return }
+
+        // First launch/activate the app
+        let url = URL(fileURLWithPath: app.path)
+        let config = NSWorkspace.OpenConfiguration()
+        config.activates = true
+
+        NSWorkspace.shared.openApplication(at: url, configuration: config) { runningApp, error in
+            guard let runningApp = runningApp else { return }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // Activate the app
+                runningApp.activate()
+
+                // Try to open preferences via AppleScript
+                let script = """
+                tell application id "\(bundleId)"
+                    activate
+                    try
+                        tell application "System Events"
+                            tell process "\(app.name)"
+                                click menu item "Settings…" of menu "\(app.name)" of menu bar 1
+                            end tell
+                        end tell
+                    end try
+                end tell
+                """
+
+                var errorDict: NSDictionary?
+                if let scriptObject = NSAppleScript(source: script) {
+                    scriptObject.executeAndReturnError(&errorDict)
+                }
+            }
+        }
     }
 }

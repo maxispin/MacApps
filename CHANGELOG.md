@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6.0] - 2024-12-24
+
+### Added
+- **Menu bar app detection**: Identifies apps with LSUIElement=true (menu bar only apps)
+- **Menu bar indicator**: Blue menubar icon shown in app list for menu bar apps
+- **Open Preferences action**: New button/menu item for menu bar apps to open their settings
+- **Improved menu bar app launching**: Uses NSWorkspace.OpenConfiguration with activation
+
+### Changed
+- AppInfo model now includes `isMenuBarApp` property
+- Database stores menu bar app status for faster loading
+- Context menu shows "Open Preferences" option for menu bar apps
+- Detail view shows "Menu Bar App" badge and preferences button
+
 ## [0.2.5.0] - 2024-12-24
 
 ### Fixed
@@ -208,6 +222,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.2.6.0 | 2024-12-24 | Menu bar app detection, indicator, and preferences |
 | 0.2.5.0 | 2024-12-24 | Fast parallel icon loading, UI refresh fix |
 | 0.2.4.0 | 2024-12-24 | IconManager with NSCache, double-click launch, lazy loading |
 | 0.2.3.0 | 2024-12-24 | Dock icon, optimized startup, async icon loading |

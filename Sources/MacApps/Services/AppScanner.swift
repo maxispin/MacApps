@@ -50,26 +50,48 @@ class AppScanner {
 
             let bundleId = getBundleIdentifier(appPath: appPath)
             let existingComment = getFinderComment(path: appPath)
+            let isMenuBar = isMenuBarApp(appPath: appPath)
 
             apps.append(AppInfo(
                 name: appName,
                 path: appPath,
                 bundleIdentifier: bundleId,
                 finderComment: existingComment,
-                icon: nil  // Skip icon loading for fast startup
+                icon: nil,  // Skip icon loading for fast startup
+                isMenuBarApp: isMenuBar
             ))
         }
 
         return apps.sorted { $0.name.lowercased() < $1.name.lowercased() }
     }
 
-    private func getBundleIdentifier(appPath: String) -> String? {
+    private func getInfoPlist(appPath: String) -> [String: Any]? {
         let plistPath = "\(appPath)/Contents/Info.plist"
         guard let plistData = FileManager.default.contents(atPath: plistPath),
               let plist = try? PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any] else {
             return nil
         }
-        return plist["CFBundleIdentifier"] as? String
+        return plist
+    }
+
+    private func getBundleIdentifier(appPath: String) -> String? {
+        return getInfoPlist(appPath: appPath)?["CFBundleIdentifier"] as? String
+    }
+
+    /// Check if app is a menu bar app (LSUIElement = true)
+    func isMenuBarApp(appPath: String) -> Bool {
+        guard let plist = getInfoPlist(appPath: appPath) else { return false }
+        // LSUIElement can be Bool or String "1"
+        if let value = plist["LSUIElement"] as? Bool {
+            return value
+        }
+        if let value = plist["LSUIElement"] as? String {
+            return value == "1" || value.lowercased() == "true"
+        }
+        if let value = plist["LSUIElement"] as? Int {
+            return value == 1
+        }
+        return false
     }
 
     func getFinderComment(path: String) -> String? {

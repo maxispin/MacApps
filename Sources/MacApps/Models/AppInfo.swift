@@ -8,6 +8,7 @@ struct AppInfo: Identifiable, Hashable {
     let bundleIdentifier: String?
     var finderComment: String?
     var icon: NSImage?
+    var isMenuBarApp: Bool = false  // LSUIElement = true
 
     var hasDescription: Bool {
         guard let comment = finderComment else { return false }
