@@ -1,5 +1,60 @@
-.DS_Store
+# Swift Package Manager
 .build/
 .swiftpm/
-*.xcodeproj
+Package.resolved
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
 xcuserdata/
+DerivedData/
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.xcscmblueprint
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Icon files
+Icon?
+
+# Thumbnails
+Thumbs.db
+
+# Build artifacts
+*.o
+*.a
+*.dylib
+*.dSYM/
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# Environment
+.env
+.env.local
+*.pem
+*.key
+
+# Logs
+*.log
+
+# Test artifacts
+.coverage/
+coverage.xml
+*.gcov
+*.gcda
+*.gcno
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
