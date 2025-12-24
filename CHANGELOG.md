@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2.0] - 2024-12-24
+
+### Added
+- **Version number** displayed in sidebar footer
+- **Combined descriptions**: Now generates both short AND expanded descriptions
+  - Short description shown first for quick overview
+  - Detailed description with keywords for better Finder search
+  - Format: "Short summary | Detailed description with keywords"
+- **Real-time progress display** during batch update
+  - Shows current app being processed
+  - Displays generated description text live
+  - Progress circle with count
+- **Stop button** to cancel batch updates mid-process
+
+### Changed
+- Simplified batch update dialog (removed description type picker - now always generates both)
+- Improved update progress UI with live text preview
+- Better status messages during generation
+
+### Fixed
+- Start Update button now works correctly
+- Stop button properly cancels ongoing updates
+
 ## [0.2.1.0] - 2024-12-24
 
 ### Added
@@ -139,6 +162,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.2.2.0 | 2024-12-24 | Version display, combined descriptions, real-time progress |
 | 0.2.1.0 | 2024-12-24 | Database caching, batch update dialog |
 | 0.2.0.0 | 2024-12-24 | SwiftUI GUI with expanded descriptions and search |
 | 0.1.1.1 | 2024-12-24 | Contact email update |

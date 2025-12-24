@@ -26,12 +26,10 @@ struct AppDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                // Header with icon and name
                 AppHeaderView(app: app)
 
                 Divider()
 
-                // Description section
                 DescriptionSection(
                     app: app,
                     isUpdating: $isUpdating,
@@ -41,12 +39,10 @@ struct AppDetailView: View {
 
                 Divider()
 
-                // Info section
                 AppInfoSection(app: app)
 
                 Divider()
 
-                // Actions
                 ActionsSection(app: app)
 
                 Spacer()
@@ -108,22 +104,9 @@ struct DescriptionSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Finder Comment")
-                    .font(.headline)
+            Text("Finder Comment")
+                .font(.headline)
 
-                Spacer()
-
-                Picker("Type", selection: $appState.selectedDescriptionType) {
-                    ForEach(DescriptionType.allCases, id: \.self) { type in
-                        Text(type.rawValue).tag(type)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 200)
-            }
-
-            // Current description
             GroupBox {
                 if let comment = app.finderComment, !comment.isEmpty {
                     Text(comment)
@@ -138,12 +121,10 @@ struct DescriptionSection: View {
             }
             .frame(minHeight: 60)
 
-            // Description type info
-            Text(appState.selectedDescriptionType.description)
+            Text("Generates both short and detailed descriptions for better Finder searchability")
                 .font(.caption)
                 .foregroundColor(.secondary)
 
-            // Generate button
             HStack {
                 Button(action: {
                     Task {
@@ -151,13 +132,10 @@ struct DescriptionSection: View {
                         showSuccess = false
                         showError = false
 
-                        let success = await appState.updateDescription(
-                            for: app,
-                            type: appState.selectedDescriptionType
-                        )
+                        await appState.updateSingleApp(app)
 
                         isUpdating = false
-                        if success {
+                        if app.hasDescription || appState.lastGeneratedDescription.isEmpty == false {
                             showSuccess = true
                         } else {
                             showError = true
@@ -202,6 +180,13 @@ struct DescriptionSection: View {
                 Label("Claude CLI not found. Install it to generate descriptions.", systemImage: "exclamationmark.triangle")
                     .font(.caption)
                     .foregroundColor(.orange)
+            }
+
+            // Show current update status
+            if !appState.currentUpdateText.isEmpty {
+                Text(appState.currentUpdateText)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
         }
     }

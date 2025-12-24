@@ -14,6 +14,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $appState.showBatchUpdateSheet) {
             BatchUpdateSheet()
+                .environmentObject(appState)
         }
         .task {
             await appState.loadFromCache()
@@ -52,6 +53,23 @@ struct SidebarView: View {
 
             // App list
             AppListView()
+
+            Divider()
+
+            // Version footer
+            HStack {
+                Text("MacApps v\(MacAppsApp.version)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Spacer()
+                if !appState.claudeAvailable {
+                    Label("Claude CLI not found", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 6)
         }
         .frame(minWidth: 350)
     }
@@ -180,12 +198,12 @@ struct AppRowView: View {
                 appState.launchApp(app)
             }
             Divider()
-            Button("Update Description") {
+            Button("Generate Description") {
                 Task {
-                    await appState.updateDescription(for: app, type: appState.selectedDescriptionType)
+                    await appState.updateSingleApp(app)
                 }
             }
-            Button("Refresh Comment") {
+            Button("Refresh from Finder") {
                 appState.refreshApp(app)
             }
         }

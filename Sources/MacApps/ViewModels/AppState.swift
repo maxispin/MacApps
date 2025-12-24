@@ -12,10 +12,15 @@ class AppState: ObservableObject {
     @Published var filterOption: FilterOption = .all
     @Published var showBatchUpdateSheet = false
 
+    // For real-time update display
+    @Published var currentUpdateText: String = ""
+    @Published var lastGeneratedDescription: String = ""
+
     private let scanner = AppScanner()
     private let claude = ClaudeService()
     private let writer = MetadataWriter()
     private let database = AppDatabase()
+    private var shouldStopUpdate = false
 
     enum FilterOption: String, CaseIterable {
         case all = "All"
@@ -26,7 +31,6 @@ class AppState: ObservableObject {
     var filteredApps: [AppInfo] {
         var result = apps
 
-        // Apply filter
         switch filterOption {
         case .all:
             break
@@ -36,7 +40,6 @@ class AppState: ObservableObject {
             result = result.filter { !$0.hasDescription }
         }
 
-        // Apply search
         if !searchText.isEmpty {
             let query = searchText.lowercased()
             result = result.filter { app in
@@ -53,6 +56,13 @@ class AppState: ObservableObject {
         claude.isAvailable
     }
 
+    var isUpdating: Bool {
+        if case .updating = updateStatus {
+            return true
+        }
+        return false
+    }
+
     var statistics: (total: Int, withDescription: Int, withoutDescription: Int) {
         let withDesc = apps.filter { $0.hasDescription }.count
         return (apps.count, withDesc, apps.count - withDesc)
@@ -67,7 +77,6 @@ class AppState: ObservableObject {
 
         let cached = database.load()
         if !cached.isEmpty {
-            // Load from cache first (fast)
             var loadedApps: [AppInfo] = []
             for stored in cached {
                 let icon = await Task.detached(priority: .userInitiated) {
@@ -85,7 +94,6 @@ class AppState: ObservableObject {
             apps = loadedApps.sorted { $0.name.lowercased() < $1.name.lowercased() }
             scanStatus = .completed(count: apps.count)
         } else {
-            // No cache, do full scan
             await scanApplications()
         }
     }
@@ -100,8 +108,6 @@ class AppState: ObservableObject {
 
         apps = scannedApps
         scanStatus = .completed(count: scannedApps.count)
-
-        // Save to database
         database.save(apps: apps)
     }
 
@@ -112,43 +118,66 @@ class AppState: ObservableObject {
             if selectedApp?.path == app.path {
                 selectedApp = apps[index]
             }
-            // Update database
             if let comment = newComment {
                 database.updateComment(for: app.path, comment: comment)
             }
         }
     }
 
-    func updateDescription(for app: AppInfo, type: DescriptionType) async -> Bool {
-        let appName = app.name
-        let bundleId = app.bundleIdentifier
-        let appPath = app.path
+    // Update single app with both short + expanded descriptions
+    func updateSingleApp(_ app: AppInfo) async {
+        currentUpdateText = "Generating description for \(app.name)..."
 
-        let description: String? = await Task.detached(priority: .userInitiated) { [claude] in
-            return claude.getDescription(for: appName, bundleId: bundleId, type: type)
-        }.value
+        let description = await generateCombinedDescription(for: app)
 
-        guard let desc = description else {
-            return false
-        }
-
-        let success = writer.setFinderComment(path: appPath, comment: desc)
-
-        if success {
-            if let index = apps.firstIndex(where: { $0.path == appPath }) {
-                apps[index].finderComment = desc
-                if selectedApp?.path == appPath {
-                    selectedApp = apps[index]
+        if let desc = description {
+            let success = writer.setFinderComment(path: app.path, comment: desc)
+            if success {
+                if let index = apps.firstIndex(where: { $0.path == app.path }) {
+                    apps[index].finderComment = desc
+                    if selectedApp?.path == app.path {
+                        selectedApp = apps[index]
+                    }
+                    database.updateComment(for: app.path, comment: desc)
                 }
-                // Update database
-                database.updateComment(for: appPath, comment: desc)
+                lastGeneratedDescription = desc
             }
         }
 
-        return success
+        currentUpdateText = ""
     }
 
-    func updateAllDescriptions(onlyMissing: Bool, type: DescriptionType) async {
+    // Generate combined description (short + expanded)
+    private func generateCombinedDescription(for app: AppInfo) async -> String? {
+        let appName = app.name
+        let bundleId = app.bundleIdentifier
+
+        // Get short description
+        currentUpdateText = "[\(appName)] Getting short description..."
+        let shortDesc: String? = await Task.detached(priority: .userInitiated) { [claude] in
+            return claude.getDescription(for: appName, bundleId: bundleId, type: .short)
+        }.value
+
+        guard let short = shortDesc else { return nil }
+        lastGeneratedDescription = short
+
+        // Get expanded description
+        currentUpdateText = "[\(appName)] Getting detailed description..."
+        let expandedDesc: String? = await Task.detached(priority: .userInitiated) { [claude] in
+            return claude.getDescription(for: appName, bundleId: bundleId, type: .expanded)
+        }.value
+
+        guard let expanded = expandedDesc else { return short }
+
+        // Combine: Short summary first, then detailed
+        let combined = "\(short) | \(expanded)"
+        lastGeneratedDescription = combined
+
+        return combined
+    }
+
+    func updateAllDescriptions(onlyMissing: Bool) async {
+        shouldStopUpdate = false
         let appsToUpdate = onlyMissing ? apps.filter { !$0.hasDescription } : apps
         let total = appsToUpdate.count
 
@@ -162,30 +191,50 @@ class AppState: ObservableObject {
         var failed = 0
 
         for (index, app) in appsToUpdate.enumerated() {
-            updateStatus = .updating(appName: app.name, current: index + 1, total: total)
+            if shouldStopUpdate {
+                updateStatus = .completed(updated: updated, skipped: total - index, failed: failed)
+                currentUpdateText = ""
+                lastGeneratedDescription = ""
+                return
+            }
 
-            if !onlyMissing || !app.hasDescription {
-                let success = await updateDescription(for: app, type: type)
+            updateStatus = .updating(appName: app.name, current: index + 1, total: total)
+            currentUpdateText = "Processing \(app.name)..."
+
+            let description = await generateCombinedDescription(for: app)
+
+            if let desc = description {
+                let success = writer.setFinderComment(path: app.path, comment: desc)
                 if success {
+                    if let appIndex = apps.firstIndex(where: { $0.path == app.path }) {
+                        apps[appIndex].finderComment = desc
+                    }
                     updated += 1
                 } else {
                     failed += 1
                 }
-                // Small delay between API calls
-                try? await Task.sleep(nanoseconds: 500_000_000)
             } else {
-                skipped += 1
+                failed += 1
             }
+
+            // Small delay between API calls
+            try? await Task.sleep(nanoseconds: 300_000_000)
         }
 
         updateStatus = .completed(updated: updated, skipped: skipped, failed: failed)
-
-        // Save updated data to database
+        currentUpdateText = ""
         database.save(apps: apps)
     }
 
-    func cancelBatchUpdate() {
+    func stopBatchUpdate() {
+        shouldStopUpdate = true
+        currentUpdateText = "Stopping..."
+    }
+
+    func resetUpdateStatus() {
         updateStatus = .idle
+        currentUpdateText = ""
+        lastGeneratedDescription = ""
     }
 
     func clearCache() {
