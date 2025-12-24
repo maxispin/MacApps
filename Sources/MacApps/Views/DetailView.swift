@@ -118,6 +118,21 @@ struct DescriptionSection: View {
         }
     }
 
+    private func formatDuration(_ ms: Int) -> String {
+        if ms < 1000 {
+            return "\(ms)ms"
+        } else {
+            let seconds = Double(ms) / 1000.0
+            return String(format: "%.1fs", seconds)
+        }
+    }
+
+    private func durationColor(_ ms: Int) -> Color {
+        if ms < 2000 { return .green }
+        if ms < 5000 { return .orange }
+        return .red
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Descriptions")
@@ -229,11 +244,20 @@ struct DescriptionSection: View {
                     .foregroundColor(.orange)
             }
 
-            // Show current update status
+            // Show current update status with timing
             if !appState.currentUpdateText.isEmpty {
-                Text(appState.currentUpdateText)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HStack {
+                    Text(appState.currentUpdateText)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    if appState.lastRequestDuration > 0 {
+                        Text(formatDuration(appState.lastRequestDuration))
+                            .font(.caption)
+                            .foregroundColor(durationColor(appState.lastRequestDuration))
+                            .fontWeight(.medium)
+                    }
+                }
             }
         }
     }

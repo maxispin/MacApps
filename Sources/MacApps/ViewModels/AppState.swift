@@ -11,10 +11,12 @@ class AppState: ObservableObject {
     @Published var selectedDescriptionType: DescriptionType = .expanded
     @Published var filterOption: FilterOption = .all
     @Published var showBatchUpdateSheet = false
+    @Published var showProgressSheet = false  // Show progress for single app too
 
     // For real-time update display
     @Published var currentUpdateText: String = ""
     @Published var lastGeneratedDescription: String = ""
+    @Published var lastRequestDuration: Int = 0  // milliseconds
 
     private let scanner = AppScanner()
     private let claude = ClaudeService()
@@ -139,7 +141,9 @@ class AppState: ObservableObject {
 
     // Update single app with descriptions for all target languages
     func updateSingleApp(_ app: AppInfo) async {
-        currentUpdateText = "Generating descriptions for \(app.name)..."
+        showProgressSheet = true
+        currentUpdateText = "Aloitetaan \(app.name)..."
+        lastRequestDuration = 0
 
         let result = await generateMultiLanguageDescriptions(for: app)
 
@@ -162,66 +166,108 @@ class AppState: ObservableObject {
             }
         }
 
+        currentUpdateText = "Valmis!"
+
+        // Auto-close after 1 second
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        showProgressSheet = false
         currentUpdateText = ""
     }
 
-    // Generate descriptions for all target languages
+    // Generate descriptions for all target languages (only missing ones)
     private func generateMultiLanguageDescriptions(for app: AppInfo) async -> (finderComment: String?, descriptions: [AppDatabase.LocalizedDescription]) {
         let appName = app.name
         let bundleId = app.bundleIdentifier
-        let missingLanguages = app.missingLanguages
+        let targetLanguages = AppDatabase.targetLanguages
 
         var allDescriptions = app.descriptions ?? []
         var primaryDescription: String? = nil
+        var fetchedAnything = false
 
-        for language in missingLanguages {
-            let langName = language == "en" ? "English" : (language == "fi" ? "Finnish" : language.uppercased())
+        for language in targetLanguages {
+            let langName = language == "en" ? "English" : (language == "fi" ? "Suomi" : language.uppercased())
+            let missing = app.missingTypes(for: language)
 
-            // Get short description
-            currentUpdateText = "[\(appName)] Getting \(langName) short description..."
-            let shortDesc: String? = await Task.detached(priority: .userInitiated) { [claude] in
-                return claude.getDescription(for: appName, bundleId: bundleId, type: .short, language: language)
-            }.value
+            // Skip if both already exist
+            if !missing.needsShort && !missing.needsExpanded {
+                currentUpdateText = "[\(appName)] \(langName) ✓ jo haettu"
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                continue
+            }
 
-            guard let short = shortDesc else { continue }
-            lastGeneratedDescription = "[\(langName)] \(short)"
+            // Get existing description for this language (to preserve what we have)
+            let existingDesc = allDescriptions.first { $0.language == language }
+            var short = existingDesc?.shortDescription
+            var expanded = existingDesc?.expandedDescription
 
-            // Get expanded description
-            currentUpdateText = "[\(appName)] Getting \(langName) detailed description..."
-            let expandedDesc: String? = await Task.detached(priority: .userInitiated) { [claude] in
-                return claude.getDescription(for: appName, bundleId: bundleId, type: .expanded, language: language)
-            }.value
+            // Fetch short if missing
+            if missing.needsShort {
+                currentUpdateText = "[\(appName)] \(langName) lyhyt..."
+                let shortResult = await Task.detached(priority: .userInitiated) { [claude] in
+                    return claude.getDescriptionWithTiming(for: appName, bundleId: bundleId, type: .short, language: language)
+                }.value
 
-            let expanded = expandedDesc
+                lastRequestDuration = shortResult.durationMs
+                if let text = shortResult.text {
+                    short = text
+                    lastGeneratedDescription = "[\(langName)] \(text)"
+                    currentUpdateText = "[\(appName)] \(langName) lyhyt ✓ \(shortResult.durationMs)ms"
+                    fetchedAnything = true
+                }
+            } else {
+                currentUpdateText = "[\(appName)] \(langName) lyhyt ✓ (jo haettu)"
+            }
 
-            // Store this language's description
-            let localizedDesc = AppDatabase.LocalizedDescription(
-                language: language,
-                shortDescription: short,
-                expandedDescription: expanded,
-                fetchedAt: Date()
-            )
-            allDescriptions.removeAll { $0.language == language }
-            allDescriptions.append(localizedDesc)
+            // Fetch expanded if missing
+            if missing.needsExpanded {
+                currentUpdateText = "[\(appName)] \(langName) pitkä..."
+                let expandedResult = await Task.detached(priority: .userInitiated) { [claude] in
+                    return claude.getDescriptionWithTiming(for: appName, bundleId: bundleId, type: .expanded, language: language)
+                }.value
 
-            // Save to database immediately
-            database.updateDescription(for: app.path, language: language, short: short, expanded: expanded)
+                lastRequestDuration = expandedResult.durationMs
+                if let text = expandedResult.text {
+                    expanded = text
+                    currentUpdateText = "[\(appName)] \(langName) pitkä ✓ \(expandedResult.durationMs)ms"
+                    fetchedAnything = true
+                }
+            } else {
+                currentUpdateText = "[\(appName)] \(langName) pitkä ✓ (jo haettu)"
+            }
+
+            // Update stored description if we have anything
+            if short != nil || expanded != nil {
+                let localizedDesc = AppDatabase.LocalizedDescription(
+                    language: language,
+                    shortDescription: short,
+                    expandedDescription: expanded,
+                    fetchedAt: Date()
+                )
+                allDescriptions.removeAll { $0.language == language }
+                allDescriptions.append(localizedDesc)
+
+                // Save to database immediately
+                database.updateDescription(for: app.path, language: language, short: short, expanded: expanded)
+            }
 
             // Use SYSTEM LANGUAGE for Finder comment (255 char limit)
             let systemLang = AppDatabase.systemLanguage
-            if language == systemLang {
-                // Combine short + expanded, respect 255 char limit
+            if language == systemLang, let s = short {
                 if let exp = expanded {
-                    let combined = "\(short) | \(exp)"
+                    let combined = "\(s) | \(exp)"
                     primaryDescription = String(combined.prefix(255))
                 } else {
-                    primaryDescription = String(short.prefix(255))
+                    primaryDescription = String(s.prefix(255))
                 }
-                lastGeneratedDescription = primaryDescription ?? short
+                lastGeneratedDescription = primaryDescription ?? s
             }
 
             // Small delay between languages
             try? await Task.sleep(nanoseconds: 200_000_000)
+        }
+
+        if !fetchedAnything {
+            currentUpdateText = "Kaikki kuvaukset jo haettu!"
         }
 
         return (primaryDescription, allDescriptions)

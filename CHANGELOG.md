@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2.0] - 2024-12-24
+
+### Added
+- **Progress Sheet**: Separate window shows fetch progress for single app updates
+- **Timing display**: Each API call shows duration with color coding (green/orange/red)
+- **Smart fetching**: Only fetches missing descriptions (checks both short AND expanded)
+
+### Changed
+- Skip already fetched descriptions with "jo haettu" status
+- Show "Kaikki kuvaukset jo haettu!" when nothing to fetch
+
 ## [0.3.1.0] - 2024-12-24
 
 ### Changed
@@ -257,6 +268,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.3.2.0 | 2024-12-24 | Progress sheet, timing display, smart fetching |
 | 0.3.1.0 | 2024-12-24 | Action verbs, system lang to Finder, menu bar fix |
 | 0.3.0.0 | 2024-12-24 | Multi-language descriptions (system lang + English) |
 | 0.2.6.0 | 2024-12-24 | Menu bar app detection, indicator, and preferences |

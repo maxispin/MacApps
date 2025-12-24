@@ -16,6 +16,10 @@ struct ContentView: View {
             BatchUpdateSheet()
                 .environmentObject(appState)
         }
+        .sheet(isPresented: $appState.showProgressSheet) {
+            ProgressSheet()
+                .environmentObject(appState)
+        }
         .task {
             await appState.loadFromCache()
         }
@@ -233,5 +237,75 @@ struct AppRowView: View {
                 appState.refreshApp(app)
             }
         }
+    }
+}
+
+// MARK: - Progress Sheet
+
+struct ProgressSheet: View {
+    @EnvironmentObject var appState: AppState
+
+    private func formatDuration(_ ms: Int) -> String {
+        if ms < 1000 {
+            return "\(ms)ms"
+        } else {
+            let seconds = Double(ms) / 1000.0
+            return String(format: "%.1fs", seconds)
+        }
+    }
+
+    private func durationColor(_ ms: Int) -> Color {
+        if ms < 2000 { return .green }
+        if ms < 5000 { return .orange }
+        return .red
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Haetaan kuvauksia")
+                .font(.headline)
+
+            ProgressView()
+                .scaleEffect(1.5)
+
+            // Current status
+            Text(appState.currentUpdateText)
+                .font(.system(.body, design: .monospaced))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(minHeight: 40)
+
+            // Timing display
+            if appState.lastRequestDuration > 0 {
+                HStack {
+                    Text("Viimeisin pyyntö:")
+                    Text(formatDuration(appState.lastRequestDuration))
+                        .fontWeight(.bold)
+                        .foregroundColor(durationColor(appState.lastRequestDuration))
+                }
+                .font(.caption)
+            }
+
+            // Generated text preview
+            if !appState.lastGeneratedDescription.isEmpty {
+                GroupBox {
+                    Text(appState.lastGeneratedDescription)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .lineLimit(4)
+                }
+                .frame(maxWidth: 400)
+            }
+
+            Divider()
+
+            Button("Sulje") {
+                appState.showProgressSheet = false
+            }
+            .keyboardShortcut(.escape)
+        }
+        .padding(30)
+        .frame(minWidth: 450, minHeight: 300)
     }
 }

@@ -21,20 +21,33 @@ struct AppInfo: Identifiable, Hashable {
         return descriptions?.isEmpty == false
     }
 
-    /// Check if all target languages have been fetched
-    var hasAllLanguages: Bool {
-        let targets = AppDatabase.targetLanguages
-        guard let descs = descriptions else { return false }
-        let fetched = Set(descs.map { $0.language })
-        return targets.allSatisfy { fetched.contains($0) }
+    /// Check if language has COMPLETE description (both short AND expanded)
+    func hasCompleteDescription(for language: String) -> Bool {
+        guard let desc = descriptions?.first(where: { $0.language == language }) else {
+            return false
+        }
+        // Must have both short AND expanded
+        return desc.shortDescription != nil && desc.expandedDescription != nil
     }
 
-    /// Get missing languages that need to be fetched
+    /// Check if all target languages have COMPLETE descriptions
+    var hasAllLanguages: Bool {
+        let targets = AppDatabase.targetLanguages
+        return targets.allSatisfy { hasCompleteDescription(for: $0) }
+    }
+
+    /// Get languages that need fetching (missing or incomplete)
     var missingLanguages: [String] {
         let targets = AppDatabase.targetLanguages
-        guard let descs = descriptions else { return targets }
-        let fetched = Set(descs.map { $0.language })
-        return targets.filter { !fetched.contains($0) }
+        return targets.filter { !hasCompleteDescription(for: $0) }
+    }
+
+    /// Get what's missing for a specific language
+    func missingTypes(for language: String) -> (needsShort: Bool, needsExpanded: Bool) {
+        guard let desc = descriptions?.first(where: { $0.language == language }) else {
+            return (true, true)  // Both missing
+        }
+        return (desc.shortDescription == nil, desc.expandedDescription == nil)
     }
 
     /// Combined text from all languages for searching

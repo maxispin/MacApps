@@ -48,8 +48,20 @@ class ClaudeService {
         claudePath != nil
     }
 
+    /// Result with timing info
+    struct DescriptionResult {
+        let text: String?
+        let durationMs: Int
+    }
+
     func getDescription(for appName: String, bundleId: String?, type: DescriptionType, language: String = "en") -> String? {
-        guard let path = claudePath else { return nil }
+        return getDescriptionWithTiming(for: appName, bundleId: bundleId, type: type, language: language).text
+    }
+
+    func getDescriptionWithTiming(for appName: String, bundleId: String?, type: DescriptionType, language: String = "en") -> DescriptionResult {
+        guard let path = claudePath else { return DescriptionResult(text: nil, durationMs: 0) }
+
+        let startTime = CFAbsoluteTimeGetCurrent()
 
         let prompt = buildPrompt(appName: appName, bundleId: bundleId, type: type, language: language)
 
@@ -66,14 +78,18 @@ class ClaudeService {
             try process.run()
             process.waitUntilExit()
 
+            let durationMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
+
             if process.terminationStatus == 0 {
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-                return output
+                return DescriptionResult(text: output, durationMs: durationMs)
             }
-        } catch {}
-
-        return nil
+            return DescriptionResult(text: nil, durationMs: durationMs)
+        } catch {
+            let durationMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
+            return DescriptionResult(text: nil, durationMs: durationMs)
+        }
     }
 
     /// Language name for prompts
