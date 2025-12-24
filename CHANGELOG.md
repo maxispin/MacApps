@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4.0] - 2024-12-24
+
+### Added
+- **IconManager**: New centralized icon management with NSCache
+  - Memory-efficient caching (100MB limit, 200 icons max)
+  - Placeholder icons while loading
+  - On-demand lazy loading when rows appear
+- **Double-click to launch**: Double-click any app in the list to launch it directly
+- **Single-click selection**: Click to select and view details
+
+### Changed
+- **Improved icon loading**: Icons now load lazily per-row instead of all at once
+- **Faster perceived startup**: UI appears instantly with placeholder icons
+- **Reduced memory usage**: Icons cached with automatic eviction
+
+### Removed
+- Removed bulk icon preloading (replaced with on-demand loading)
+
 ## [0.2.3.0] - 2024-12-24
 
 ### Added
@@ -178,6 +196,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.2.4.0 | 2024-12-24 | IconManager with NSCache, double-click launch, lazy loading |
 | 0.2.3.0 | 2024-12-24 | Dock icon, optimized startup, async icon loading |
 | 0.2.2.0 | 2024-12-24 | Version display, combined descriptions, real-time progress |
 | 0.2.1.0 | 2024-12-24 | Database caching, batch update dialog |

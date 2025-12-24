@@ -147,20 +147,14 @@ struct AppListView: View {
 struct AppRowView: View {
     let app: AppInfo
     @EnvironmentObject var appState: AppState
+    @State private var icon: NSImage?
 
     var body: some View {
         HStack(spacing: 12) {
-            // App icon
-            if let icon = app.icon {
-                Image(nsImage: icon)
-                    .resizable()
-                    .frame(width: 32, height: 32)
-            } else {
-                Image(systemName: "app.fill")
-                    .resizable()
-                    .frame(width: 32, height: 32)
-                    .foregroundColor(.secondary)
-            }
+            // App icon with async loading
+            Image(nsImage: icon ?? IconManager.shared.placeholder)
+                .resizable()
+                .frame(width: 32, height: 32)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(app.name)
@@ -190,6 +184,20 @@ struct AppRowView: View {
             }
         }
         .padding(.vertical, 4)
+        .onAppear {
+            // Load icon when row appears
+            Task {
+                icon = await IconManager.shared.loadIcon(for: app.path)
+            }
+        }
+        .onTapGesture(count: 2) {
+            // Double-click to launch app
+            appState.launchApp(app)
+        }
+        .onTapGesture(count: 1) {
+            // Single click to select
+            appState.selectedApp = app
+        }
         .contextMenu {
             Button("Open in Finder") {
                 appState.openInFinder(app)
