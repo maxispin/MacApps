@@ -1,0 +1,187 @@
+import SwiftUI
+
+struct ContentView: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        NavigationSplitView {
+            SidebarView()
+        } detail: {
+            DetailView()
+        }
+        .toolbar {
+            ToolbarView()
+        }
+        .task {
+            await appState.scanApplications()
+        }
+    }
+}
+
+struct SidebarView: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Search bar
+            SearchBar(text: $appState.searchText)
+                .padding()
+
+            // Filter picker
+            Picker("Filter", selection: $appState.filterOption) {
+                ForEach(AppState.FilterOption.allCases, id: \.self) { option in
+                    Text(option.rawValue).tag(option)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+
+            // Statistics bar
+            StatisticsBar()
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+
+            Divider()
+
+            // App list
+            AppListView()
+        }
+        .frame(minWidth: 350)
+    }
+}
+
+struct SearchBar: View {
+    @Binding var text: String
+
+    var body: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+            TextField("Search apps or descriptions...", text: $text)
+                .textFieldStyle(.plain)
+            if !text.isEmpty {
+                Button(action: { text = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(8)
+        .background(Color(nsColor: .controlBackgroundColor))
+        .cornerRadius(8)
+    }
+}
+
+struct StatisticsBar: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        let stats = appState.statistics
+        HStack(spacing: 16) {
+            Label("\(stats.total)", systemImage: "app.fill")
+                .foregroundColor(.primary)
+            Label("\(stats.withDescription)", systemImage: "checkmark.circle.fill")
+                .foregroundColor(.green)
+            Label("\(stats.withoutDescription)", systemImage: "circle")
+                .foregroundColor(.orange)
+        }
+        .font(.caption)
+    }
+}
+
+struct AppListView: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        List(appState.filteredApps, selection: $appState.selectedApp) { app in
+            AppRowView(app: app)
+                .tag(app)
+        }
+        .listStyle(.inset)
+        .overlay {
+            if appState.scanStatus == .scanning {
+                ProgressView("Scanning applications...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.ultraThinMaterial)
+            } else if appState.filteredApps.isEmpty {
+                ContentUnavailableView {
+                    Label("No Applications", systemImage: "app.dashed")
+                } description: {
+                    if !appState.searchText.isEmpty {
+                        Text("No apps match '\(appState.searchText)'")
+                    } else {
+                        Text("No applications found")
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct AppRowView: View {
+    let app: AppInfo
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // App icon
+            if let icon = app.icon {
+                Image(nsImage: icon)
+                    .resizable()
+                    .frame(width: 32, height: 32)
+            } else {
+                Image(systemName: "app.fill")
+                    .resizable()
+                    .frame(width: 32, height: 32)
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app.name)
+                    .font(.headline)
+                    .lineLimit(1)
+
+                if let comment = app.finderComment, !comment.isEmpty {
+                    Text(comment)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                } else {
+                    Text("No description")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                        .italic()
+                }
+            }
+
+            Spacer()
+
+            // Status indicator
+            if app.hasDescription {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.caption)
+            }
+        }
+        .padding(.vertical, 4)
+        .contextMenu {
+            Button("Open in Finder") {
+                appState.openInFinder(app)
+            }
+            Button("Launch App") {
+                appState.launchApp(app)
+            }
+            Divider()
+            Button("Update Description") {
+                Task {
+                    await appState.updateDescription(for: app, type: appState.selectedDescriptionType)
+                }
+            }
+            Button("Refresh Comment") {
+                appState.refreshApp(app)
+            }
+        }
+    }
+}

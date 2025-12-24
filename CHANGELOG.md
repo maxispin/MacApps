@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0.0] - 2024-12-24
+
+### Added
+- **Full SwiftUI GUI Application**
+  - Native macOS app with modern interface
+  - Navigation split view with sidebar and detail panel
+  - Application list with icons and descriptions
+  - Search bar for filtering apps by name, description, or bundle ID
+  - Filter options: All, With Description, Without Description
+  - Statistics bar showing app counts
+
+- **Enhanced Description Generation**
+  - Two description types: Short (5-10 words) and Expanded (20-40 words)
+  - Expanded descriptions include keywords for better Finder searchability
+  - Per-app description generation with visual feedback
+  - Batch update for all apps or only those without descriptions
+
+- **App Detail View**
+  - Large app icon and name display
+  - Bundle identifier display
+  - Current Finder comment preview
+  - Generate description button with type selection
+  - Refresh comment from Finder
+  - Launch app and Show in Finder actions
+
+- **Toolbar Actions**
+  - Scan/rescan applications (Cmd+R)
+  - Update all descriptions button
+  - Status indicator for batch operations
+
+- **Context Menu**
+  - Right-click on any app for quick actions
+  - Open in Finder, Launch App
+  - Update Description, Refresh Comment
+
+### Changed
+- Migrated from CLI to SwiftUI application
+- Requires macOS 14.0 (Sonoma) or later
+- Reorganized source code into modular structure:
+  - Models: AppInfo, ScanStatus, UpdateStatus, DescriptionType
+  - Services: AppScanner, ClaudeService, MetadataWriter
+  - ViewModels: AppState
+  - Views: ContentView, DetailView, ToolbarView
+
+### Improved
+- Better error handling and user feedback
+- Async/await for non-blocking operations
+- App icons displayed from actual applications
+- More detailed AI prompts for better descriptions
+
+## [0.1.1.1] - 2024-12-24
+
+### Changed
+- Updated contact email to maxispin@gmail.com
+
 ## [0.1.1.0] - 2024-12-24
 
 ### Changed
@@ -63,6 +118,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.2.0.0 | 2024-12-24 | SwiftUI GUI with expanded descriptions and search |
+| 0.1.1.1 | 2024-12-24 | Contact email update |
 | 0.1.1.0 | 2024-12-24 | App Store preparation: Proprietary license, EULA, Privacy Policy |
 | 0.1.0.0 | 2024-12-24 | Initial public release |
 

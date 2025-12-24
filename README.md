@@ -1,23 +1,34 @@
 # MacApps
 
 [![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
-[![Platform](https://img.shields.io/badge/Platform-macOS%2013+-blue.svg)](https://www.apple.com/macos)
+[![Platform](https://img.shields.io/badge/Platform-macOS%2014+-blue.svg)](https://www.apple.com/macos)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.1.1.0-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-0.2.0.0-brightgreen.svg)](CHANGELOG.md)
 
-A macOS application that automatically generates and adds descriptive Finder comments to applications using Claude AI. This makes it easy to search for applications by their functionality in Finder.
+A native macOS application that automatically generates and adds descriptive Finder comments to applications using Claude AI. Search for applications by their functionality directly in Finder.
 
 ## Features
 
-- Scans all applications in `/Applications` directory
-- Generates concise, descriptive comments using Claude CLI
-- Writes descriptions to Finder comments metadata
-- Skips applications that already have comments
-- Supports incremental processing (safe to run multiple times)
+- **Visual Application Browser**: Browse all installed apps with icons and descriptions
+- **Smart Search**: Filter apps by name, description, or bundle identifier
+- **AI-Powered Descriptions**: Generate detailed descriptions using Claude AI
+- **Two Description Modes**:
+  - **Short**: Brief 5-10 word descriptions
+  - **Expanded**: Detailed 20-40 word descriptions with searchable keywords
+- **Batch Processing**: Update all apps at once or only those missing descriptions
+- **Real-time Updates**: See changes instantly in the app
+
+## Screenshots
+
+The application features a clean, native macOS interface with:
+- Sidebar listing all applications with icons
+- Search and filter controls
+- Detailed view for selected application
+- One-click description generation
 
 ## Requirements
 
-- macOS 13.0 (Ventura) or later
+- macOS 14.0 (Sonoma) or later
 - [Claude CLI](https://github.com/anthropics/claude-code) installed and configured
 - Finder automation permissions
 
@@ -33,51 +44,47 @@ Download MacApps from the [Mac App Store](#) (coming soon).
 git clone https://github.com/maxispin/MacApps.git
 cd MacApps
 swift build -c release
+swift run
 ```
 
 ## Usage
 
-```bash
-# Run from project directory
-swift run
+### Basic Workflow
 
-# Or if installed globally
-macapps
-```
+1. **Launch MacApps** - The app automatically scans your `/Applications` folder
+2. **Browse or Search** - Use the sidebar to find apps, or search by name/description
+3. **Select an App** - Click to view details and current Finder comment
+4. **Generate Description** - Choose Short or Expanded, then click "Generate Description"
+5. **Search in Finder** - Use Spotlight or Finder to search by description
 
-### Example Output
+### Keyboard Shortcuts
 
-```
-🔍 MacApps - Application Metadata Update
-==================================================
+| Shortcut | Action |
+|----------|--------|
+| Cmd+R | Rescan applications |
 
-📂 Scanning /Applications directory...
-   Found 142 applications
+### Context Menu
 
-[1/142] Safari
-   🤖 Fetching description...
-   📝 Description: "Web browser for internet browsing"
-   ✅ Metadata updated
+Right-click any app in the list for quick actions:
+- Open in Finder
+- Launch App
+- Update Description
+- Refresh Comment
 
-[2/142] Xcode
-   ⏭️  Skipped - comment exists: "Apple development IDE"
-...
+### Batch Update
 
-==================================================
-📊 Summary:
-   ✅ Updated: 89
-   ⏭️  Skipped: 45
-   ❌ Failed: 8
-
-💡 Tip: Search apps in Finder using their descriptions!
-```
+Use the "Update All" toolbar button to:
+- Update all apps at once
+- Update only apps without descriptions
+- Choose between Short and Expanded descriptions
 
 ## How It Works
 
-1. **Scan**: Reads all `.app` bundles from `/Applications`
-2. **Check**: Retrieves existing Finder comments (skips if present)
-3. **Generate**: Sends app name and bundle ID to Claude CLI for description
-4. **Write**: Uses AppleScript to set Finder comment metadata
+1. **Scan**: Reads all `.app` bundles from `/Applications` with icons
+2. **Display**: Shows apps in a searchable, filterable list
+3. **Generate**: Sends app info to Claude CLI for AI description
+4. **Write**: Saves description to Finder comment metadata
+5. **Search**: Finder and Spotlight can now find apps by functionality
 
 ## Security & Privacy
 
@@ -99,12 +106,38 @@ To grant permissions:
 
 ## Configuration
 
-The tool searches for Claude CLI in these locations:
+Claude CLI is searched in these locations:
 - `/usr/local/bin/claude`
 - `/opt/homebrew/bin/claude`
 - `~/.local/bin/claude`
 - `~/bin/claude`
 - Falls back to `which claude` if not found
+
+## Project Structure
+
+```
+MacApps/
+├── Package.swift
+├── Sources/MacApps/
+│   ├── MacAppsApp.swift          # App entry point
+│   ├── Models/
+│   │   └── AppInfo.swift         # Data models
+│   ├── Services/
+│   │   ├── AppScanner.swift      # App discovery
+│   │   ├── ClaudeService.swift   # AI integration
+│   │   └── MetadataWriter.swift  # Finder comments
+│   ├── ViewModels/
+│   │   └── AppState.swift        # App state management
+│   └── Views/
+│       ├── ContentView.swift     # Main UI
+│       ├── DetailView.swift      # App detail panel
+│       └── ToolbarView.swift     # Toolbar controls
+├── README.md
+├── LICENSE
+├── EULA.md
+├── PRIVACY.md
+└── CHANGELOG.md
+```
 
 ## Troubleshooting
 

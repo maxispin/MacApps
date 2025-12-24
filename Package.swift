@@ -4,12 +4,12 @@ import PackageDescription
 let package = Package(
     name: "MacApps",
     platforms: [
-        .macOS(.v13)
+        .macOS(.v14)
     ],
     targets: [
         .executableTarget(
             name: "MacApps",
-            path: "Sources"
+            path: "Sources/MacApps"
         )
     ]
 )
