@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1.0] - 2024-12-24
+
+### Added
+- **Persistent Database**: App data is now cached locally
+  - Fast startup - no need to rescan every time
+  - Data stored in ~/Library/Application Support/MacApps/apps.json
+  - Comments synced to database when updated
+- **Batch Update Dialog**: New sheet for updating all apps at once
+  - Choose between Short and Expanded description types
+  - Option to update only apps without descriptions
+  - Progress bar with current app name
+  - Cancel button to stop batch processing
+
+### Changed
+- Removed "Filter" label from segmented picker (cleaner UI)
+- App loads from cache on startup, scans only when needed
+- Improved batch update flow with dedicated dialog
+
+### Fixed
+- Filter picker no longer shows redundant label
+
 ## [0.2.0.0] - 2024-12-24
 
 ### Added
@@ -118,6 +139,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.2.1.0 | 2024-12-24 | Database caching, batch update dialog |
 | 0.2.0.0 | 2024-12-24 | SwiftUI GUI with expanded descriptions and search |
 | 0.1.1.1 | 2024-12-24 | Contact email update |
 | 0.1.1.0 | 2024-12-24 | App Store preparation: Proprietary license, EULA, Privacy Policy |

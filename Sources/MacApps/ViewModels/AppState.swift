@@ -10,10 +10,12 @@ class AppState: ObservableObject {
     @Published var selectedApp: AppInfo?
     @Published var selectedDescriptionType: DescriptionType = .expanded
     @Published var filterOption: FilterOption = .all
+    @Published var showBatchUpdateSheet = false
 
     private let scanner = AppScanner()
     private let claude = ClaudeService()
     private let writer = MetadataWriter()
+    private let database = AppDatabase()
 
     enum FilterOption: String, CaseIterable {
         case all = "All"
@@ -56,6 +58,38 @@ class AppState: ObservableObject {
         return (apps.count, withDesc, apps.count - withDesc)
     }
 
+    var hasCachedData: Bool {
+        database.hasCachedData()
+    }
+
+    func loadFromCache() async {
+        scanStatus = .scanning
+
+        let cached = database.load()
+        if !cached.isEmpty {
+            // Load from cache first (fast)
+            var loadedApps: [AppInfo] = []
+            for stored in cached {
+                let icon = await Task.detached(priority: .userInitiated) {
+                    NSWorkspace.shared.icon(forFile: stored.path)
+                }.value
+
+                loadedApps.append(AppInfo(
+                    name: stored.name,
+                    path: stored.path,
+                    bundleIdentifier: stored.bundleIdentifier,
+                    finderComment: stored.finderComment,
+                    icon: icon
+                ))
+            }
+            apps = loadedApps.sorted { $0.name.lowercased() < $1.name.lowercased() }
+            scanStatus = .completed(count: apps.count)
+        } else {
+            // No cache, do full scan
+            await scanApplications()
+        }
+    }
+
     func scanApplications() async {
         scanStatus = .scanning
         apps = []
@@ -66,6 +100,9 @@ class AppState: ObservableObject {
 
         apps = scannedApps
         scanStatus = .completed(count: scannedApps.count)
+
+        // Save to database
+        database.save(apps: apps)
     }
 
     func refreshApp(_ app: AppInfo) {
@@ -74,6 +111,10 @@ class AppState: ObservableObject {
             apps[index].finderComment = newComment
             if selectedApp?.path == app.path {
                 selectedApp = apps[index]
+            }
+            // Update database
+            if let comment = newComment {
+                database.updateComment(for: app.path, comment: comment)
             }
         }
     }
@@ -99,13 +140,15 @@ class AppState: ObservableObject {
                 if selectedApp?.path == appPath {
                     selectedApp = apps[index]
                 }
+                // Update database
+                database.updateComment(for: appPath, comment: desc)
             }
         }
 
         return success
     }
 
-    func updateAllDescriptions(onlyMissing: Bool) async {
+    func updateAllDescriptions(onlyMissing: Bool, type: DescriptionType) async {
         let appsToUpdate = onlyMissing ? apps.filter { !$0.hasDescription } : apps
         let total = appsToUpdate.count
 
@@ -122,7 +165,7 @@ class AppState: ObservableObject {
             updateStatus = .updating(appName: app.name, current: index + 1, total: total)
 
             if !onlyMissing || !app.hasDescription {
-                let success = await updateDescription(for: app, type: selectedDescriptionType)
+                let success = await updateDescription(for: app, type: type)
                 if success {
                     updated += 1
                 } else {
@@ -136,6 +179,17 @@ class AppState: ObservableObject {
         }
 
         updateStatus = .completed(updated: updated, skipped: skipped, failed: failed)
+
+        // Save updated data to database
+        database.save(apps: apps)
+    }
+
+    func cancelBatchUpdate() {
+        updateStatus = .idle
+    }
+
+    func clearCache() {
+        database.clear()
     }
 
     func openInFinder(_ app: AppInfo) {

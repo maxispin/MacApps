@@ -12,8 +12,11 @@ struct ContentView: View {
         .toolbar {
             ToolbarView()
         }
+        .sheet(isPresented: $appState.showBatchUpdateSheet) {
+            BatchUpdateSheet()
+        }
         .task {
-            await appState.scanApplications()
+            await appState.loadFromCache()
         }
     }
 }
@@ -28,12 +31,15 @@ struct SidebarView: View {
                 .padding()
 
             // Filter picker
-            Picker("Filter", selection: $appState.filterOption) {
+            Picker(selection: $appState.filterOption) {
                 ForEach(AppState.FilterOption.allCases, id: \.self) { option in
                     Text(option.rawValue).tag(option)
                 }
+            } label: {
+                EmptyView()
             }
             .pickerStyle(.segmented)
+            .labelsHidden()
             .padding(.horizontal)
             .padding(.bottom, 8)
 
