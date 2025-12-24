@@ -2,10 +2,10 @@
 
 [![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2013+-blue.svg)](https://www.apple.com/macos)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.1.0.0-brightgreen.svg)](CHANGELOG.md)
+[![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-0.1.1.0-brightgreen.svg)](CHANGELOG.md)
 
-A macOS command-line utility that automatically generates and adds descriptive Finder comments to applications using Claude AI. This makes it easy to search for applications by their functionality in Finder.
+A macOS application that automatically generates and adds descriptive Finder comments to applications using Claude AI. This makes it easy to search for applications by their functionality in Finder.
 
 ## Features
 
@@ -18,28 +18,21 @@ A macOS command-line utility that automatically generates and adds descriptive F
 ## Requirements
 
 - macOS 13.0 (Ventura) or later
-- Swift 5.9+
 - [Claude CLI](https://github.com/anthropics/claude-code) installed and configured
 - Finder automation permissions
 
 ## Installation
 
-### From Source
+### From Mac App Store
+
+Download MacApps from the [Mac App Store](#) (coming soon).
+
+### From Source (Development Only)
 
 ```bash
-git clone https://github.com/yourusername/MacApps.git
+git clone https://github.com/maxispin/MacApps.git
 cd MacApps
 swift build -c release
-```
-
-The compiled binary will be at `.build/release/MacApps`.
-
-### Manual Installation
-
-```bash
-# Build and install to /usr/local/bin
-swift build -c release
-sudo cp .build/release/MacApps /usr/local/bin/macapps
 ```
 
 ## Usage
@@ -86,12 +79,12 @@ macapps
 3. **Generate**: Sends app name and bundle ID to Claude CLI for description
 4. **Write**: Uses AppleScript to set Finder comment metadata
 
-## Security Considerations
+## Security & Privacy
 
 - Only reads application metadata (Info.plist) - no application code execution
 - Uses AppleScript through `/usr/bin/osascript` for Finder integration
 - Requires explicit user permission for Finder automation
-- No network access except through Claude CLI
+- **No personal data collection** - see [Privacy Policy](PRIVACY.md)
 - All file operations are read-only except for Finder comments
 
 ## Permissions
@@ -102,7 +95,7 @@ On first run, macOS will prompt for:
 
 To grant permissions:
 1. Go to System Settings → Privacy & Security → Automation
-2. Enable Terminal (or your terminal app) to control Finder
+2. Enable MacApps to control Finder
 
 ## Configuration
 
@@ -112,34 +105,6 @@ The tool searches for Claude CLI in these locations:
 - `~/.local/bin/claude`
 - `~/bin/claude`
 - Falls back to `which claude` if not found
-
-## Building
-
-```bash
-# Debug build
-swift build
-
-# Release build (optimized)
-swift build -c release
-
-# Run tests
-swift test
-```
-
-## Project Structure
-
-```
-MacApps/
-├── Package.swift       # Swift package manifest
-├── Sources/
-│   └── main.swift      # Main application source
-├── README.md           # This file
-├── LICENSE             # MIT license
-├── CHANGELOG.md        # Version history
-├── CONTRIBUTING.md     # Contribution guidelines
-├── SECURITY.md         # Security policy
-└── CLAUDE.md           # AI assistant guidelines
-```
 
 ## Troubleshooting
 
@@ -157,13 +122,12 @@ Grant automation permissions in System Settings → Privacy & Security → Autom
 - Apps with special characters in names may need escaping
 - Some apps may not have valid Info.plist files
 
-## Contributing
+## Legal
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- **License**: [Proprietary - All Rights Reserved](LICENSE)
+- **EULA**: [End User License Agreement](EULA.md)
+- **Privacy**: [Privacy Policy](PRIVACY.md)
+- **Security**: [Security Policy](SECURITY.md)
 
 ## Changelog
 
@@ -171,7 +135,9 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## Author
 
-Created with Claude AI assistance.
+**Japo Tyrväinen**
+
+Copyright © 2024 Japo Tyrväinen. All rights reserved.
 
 ## Acknowledgments
 

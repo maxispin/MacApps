@@ -1,145 +1,72 @@
 # Contributing to MacApps
 
-Thank you for your interest in contributing to MacApps! This document provides guidelines and information for contributors.
+Thank you for your interest in MacApps! This document explains how you can provide feedback and report issues.
 
-## Code of Conduct
+## Important Notice
 
-Please be respectful and constructive in all interactions. We welcome contributors of all experience levels.
+**MacApps is proprietary software.** The source code is not open for external contributions. All rights are reserved by Japo Tyrväinen.
 
-## How to Contribute
+## How You Can Help
 
 ### Reporting Bugs
 
-1. Check existing issues to avoid duplicates
-2. Use the bug report template if available
-3. Include:
+If you encounter a bug, please report it through:
+
+1. **App Store Reviews**: Leave a review describing the issue
+2. **Email**: Contact [your-email@example.com] with:
    - macOS version
-   - Swift version (`swift --version`)
    - Steps to reproduce
    - Expected vs actual behavior
-   - Relevant log output
+   - Screenshots if applicable
 
 ### Suggesting Features
 
-1. Check existing issues/discussions first
-2. Describe the use case clearly
-3. Explain why this would benefit users
-4. Consider implementation complexity
+We welcome feature suggestions! Please send them to [your-email@example.com] with:
+- Clear description of the feature
+- Use case and benefits
+- Any reference examples
 
-### Submitting Code
+### Feedback
 
-#### Setup
+General feedback about the application can be sent to [your-email@example.com].
 
-1. Fork the repository
-2. Clone your fork:
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/MacApps.git
-   cd MacApps
-   ```
-3. Create a feature branch:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+## What We Cannot Accept
 
-#### Development
+Due to the proprietary nature of this software, we cannot accept:
 
-1. Make your changes
-2. Follow the code style guidelines below
-3. Test your changes thoroughly
-4. Update documentation if needed
+- Code contributions or pull requests
+- Patches or modifications
+- Derivative works
 
-#### Commit Guidelines
+## Security Issues
 
-- Use clear, descriptive commit messages
-- Reference issues when applicable: `Fix #123`
-- Keep commits focused and atomic
-- Update version number (BUILD level minimum)
+If you discover a security vulnerability, please report it privately:
+- Email: [your-email@example.com]
+- **Do NOT** post security issues publicly
 
-Example commit messages:
-```
-Add support for scanning ~/Applications directory
+See [SECURITY.md](SECURITY.md) for our full security policy.
 
-- Extend AppScanner to accept custom paths
-- Update documentation with new feature
-- Bump version to 0.1.1.0
-```
+## Code of Conduct
 
-#### Pull Request Process
+When providing feedback or reporting issues, please:
+- Be respectful and constructive
+- Provide clear and detailed information
+- Be patient while we investigate
 
-1. Update CHANGELOG.md with your changes
-2. Ensure the build succeeds: `swift build`
-3. Update README.md if adding user-facing features
-4. Submit PR with clear description
-5. Respond to review feedback
+## Commercial Licensing
 
-## Code Style Guidelines
+If you are interested in:
+- Licensing the software for commercial use
+- White-label solutions
+- Enterprise deployments
+- Custom development
 
-### Swift Conventions
+Please contact [your-email@example.com] for licensing inquiries.
 
-- Use Swift 5.9+ features appropriately
-- Follow Swift API Design Guidelines
-- Use `// MARK: -` for logical sections
-- Prefer `guard` for early exits
-- Use meaningful variable names
+## Thank You
 
-### Formatting
+We appreciate your interest in MacApps and value your feedback in making the application better for all users.
 
-```swift
-// Good
-func processApplication(at path: String) -> Result<AppInfo, Error> {
-    guard FileManager.default.fileExists(atPath: path) else {
-        return .failure(AppError.notFound)
-    }
-    // ...
-}
+---
 
-// Avoid
-func process(_ p: String) -> Result<AppInfo, Error> {
-    if !FileManager.default.fileExists(atPath: p) {
-        return .failure(AppError.notFound)
-    }
-    // ...
-}
-```
-
-### Documentation
-
-- Add comments for complex logic
-- Update README for user-facing changes
-- Document public APIs
-- Keep CLAUDE.md updated for AI assistants
-
-## Security Guidelines
-
-This tool has system-level access. Security is critical:
-
-1. **Never execute untrusted code**
-2. **Always sanitize inputs** for AppleScript
-3. **Use hardcoded paths** for system binaries
-4. **Validate all file paths**
-5. **Report security issues privately** (see SECURITY.md)
-
-## Testing
-
-Currently, testing is manual. When testing your changes:
-
-1. Test with various application types:
-   - Apple system apps
-   - Third-party apps
-   - Apps with special characters in names
-
-2. Test edge cases:
-   - Missing Info.plist
-   - Permission denied
-   - Claude CLI unavailable
-   - Existing Finder comments
-
-3. Verify no regressions in existing functionality
-
-## Questions?
-
-Feel free to open an issue for questions about contributing.
-
-## License
-
-By contributing, you agree that your contributions will be licensed under the MIT License.
+Copyright © 2024 Japo Tyrväinen. All rights reserved.

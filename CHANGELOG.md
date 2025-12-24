@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1.0] - 2024-12-24
+
+### Changed
+- **License**: Changed from MIT to Proprietary (All Rights Reserved)
+- Updated README.md for commercial App Store distribution
+- Updated CONTRIBUTING.md to reflect proprietary model
+
+### Added
+- **EULA.md**: End User License Agreement for App Store distribution
+  - Apple-specific terms and conditions
+  - Third-party service disclosures (Claude CLI)
+  - Warranty disclaimers and liability limitations
+- **PRIVACY.md**: Privacy Policy for App Store compliance
+  - GDPR-compliant disclosures
+  - App Store privacy nutrition label data
+  - Third-party service (Claude CLI) data handling
+- Proprietary license with full rights reservation
+- Legal section in README with links to all policies
+
+### Security
+- Added comprehensive privacy disclosures
+- Documented data handling practices
+- Added App Store privacy compliance information
+
 ## [0.1.0.0] - 2024-12-24
 
 ### Added
@@ -22,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive documentation:
   - README.md with full usage instructions
   - CLAUDE.md for AI assistant guidelines
-  - LICENSE (MIT)
+  - LICENSE (MIT - later changed)
   - CHANGELOG.md (this file)
   - CONTRIBUTING.md guidelines
   - SECURITY.md policy
@@ -39,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.1.1.0 | 2024-12-24 | App Store preparation: Proprietary license, EULA, Privacy Policy |
 | 0.1.0.0 | 2024-12-24 | Initial public release |
 
 ---
