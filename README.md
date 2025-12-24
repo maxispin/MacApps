@@ -20,19 +20,20 @@ You know what you want to **do**, but you can't remember which app does it.
 MacApps uses AI to generate **verb-focused descriptions** for each app:
 
 ```
-Numbers: Laske, taulukoi, analysoi dataa, luo kaavioita, graafeja, budjetteja...
-Photoshop: Muokkaa kuvia, retusoi, rajaa, säädä värejä, poista taustoja...
-Terminal: Suorita komentoja, hallitse tiedostoja, automatisoi, skriptaa...
+Numbers: Calculate, create spreadsheets, analyze data, build charts, budgets...
+Photoshop: Edit images, retouch photos, crop, adjust colors, remove backgrounds...
+Terminal: Run commands, manage files, automate tasks, write scripts...
 ```
 
-Now you can search in Finder/Spotlight by **what you want to do**:
-- Type "laske" → Find all calculation apps
-- Type "piirrä" → Find all drawing apps
-- Type "analysoi" → Find data analysis apps
+Now you can search in Spotlight by **what you want to do**:
+- Type "calculate" → Find all calculation apps
+- Type "draw" → Find all drawing apps
+- Type "analyze" → Find data analysis apps
 
 ## Features
 
 - **Action-Based Descriptions**: Focus on verbs - what you can DO with each app
+- **Spotlight Integration**: Descriptions indexed via CoreSpotlight - search without prefixes!
 - **Multi-Language Support**: Descriptions in your system language + English
 - **Visual Application Browser**: Browse all installed apps with icons
 - **Smart Search**: Search by actions across ALL languages
@@ -78,8 +79,8 @@ swift run
 1. **Launch MacApps** - The app automatically scans your `/Applications` folder
 2. **Browse or Search** - Use the sidebar to find apps, or search by name/description
 3. **Select an App** - Click to view details and current Finder comment
-4. **Generate Description** - Choose Short or Expanded, then click "Generate Description"
-5. **Search in Finder** - Use Spotlight or Finder to search by description
+4. **Generate Description** - Click "Generate Description" to create AI descriptions
+5. **Search in Spotlight** - Just type what you want to do - no prefixes needed!
 
 ### Keyboard Shortcuts
 
@@ -100,15 +101,14 @@ Right-click any app in the list for quick actions:
 Use the "Update All" toolbar button to:
 - Update all apps at once
 - Update only apps without descriptions
-- Choose between Short and Expanded descriptions
 
 ## How It Works
 
 1. **Scan**: Reads all `.app` bundles from `/Applications` with icons
 2. **Display**: Shows apps in a searchable, filterable list
 3. **Generate**: Sends app info to Claude CLI for AI description
-4. **Write**: Saves description to Finder comment metadata
-5. **Search**: Finder and Spotlight can now find apps by functionality
+4. **Write**: Saves description to Finder comment + CoreSpotlight index
+5. **Search**: Spotlight finds apps by what they DO - no prefixes needed!
 
 ## Security & Privacy
 
@@ -149,7 +149,7 @@ MacApps/
 │   ├── Services/
 │   │   ├── AppScanner.swift      # App discovery
 │   │   ├── ClaudeService.swift   # AI integration
-│   │   └── MetadataWriter.swift  # Finder comments
+│   │   └── MetadataWriter.swift  # Finder comments + Spotlight
 │   ├── ViewModels/
 │   │   └── AppState.swift        # App state management
 │   └── Views/
