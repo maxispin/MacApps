@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5.0] - 2024-12-24
+
+### Fixed
+- **Icon loading speed**: Icons now load in parallel batches (20 at a time) instead of one by one
+- **UI refresh**: Icons now appear immediately when loaded (ObservableObject pattern)
+- **Priority boost**: Visible row icons load with `userInitiated` priority instead of `background`
+
+### Changed
+- IconManager now uses `@Published` to trigger SwiftUI updates when icons load
+- Preload all icons immediately after app list loads (parallel batches)
+- Use `.task(id:)` modifier for more reliable icon loading per row
+
 ## [0.2.4.0] - 2024-12-24
 
 ### Added
@@ -196,6 +208,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.2.5.0 | 2024-12-24 | Fast parallel icon loading, UI refresh fix |
 | 0.2.4.0 | 2024-12-24 | IconManager with NSCache, double-click launch, lazy loading |
 | 0.2.3.0 | 2024-12-24 | Dock icon, optimized startup, async icon loading |
 | 0.2.2.0 | 2024-12-24 | Version display, combined descriptions, real-time progress |

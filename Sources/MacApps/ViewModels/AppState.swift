@@ -72,26 +72,28 @@ class AppState: ObservableObject {
         database.hasCachedData()
     }
 
-    // Fast startup: load data immediately, icons load on-demand via IconManager
+    // Fast startup: load data immediately, then preload all icons in parallel
     func loadFromCache() async {
         scanStatus = .scanning
 
         let cached = database.load()
         if !cached.isEmpty {
             // Load apps immediately WITHOUT icons (fast)
-            // Icons are loaded on-demand by IconManager when rows appear
             let loadedApps: [AppInfo] = cached.map { stored in
                 AppInfo(
                     name: stored.name,
                     path: stored.path,
                     bundleIdentifier: stored.bundleIdentifier,
                     finderComment: stored.finderComment,
-                    icon: nil  // Icons loaded on-demand by IconManager
+                    icon: nil
                 )
             }.sorted { $0.name.lowercased() < $1.name.lowercased() }
 
             apps = loadedApps
             scanStatus = .completed(count: apps.count)
+
+            // Preload all icons in parallel batches (non-blocking)
+            IconManager.shared.preloadAllIcons(for: apps.map { $0.path })
         } else {
             await scanApplications()
         }
@@ -105,7 +107,6 @@ class AppState: ObservableObject {
         IconManager.shared.clearCache()
 
         // Get app list quickly (without icons)
-        // Icons are loaded on-demand by IconManager when rows appear
         let scannedApps = await Task.detached(priority: .userInitiated) { [scanner] in
             return scanner.scanApplicationsWithoutIcons()
         }.value
@@ -113,6 +114,9 @@ class AppState: ObservableObject {
         apps = scannedApps
         scanStatus = .completed(count: scannedApps.count)
         database.save(apps: apps)
+
+        // Preload all icons in parallel batches (non-blocking)
+        IconManager.shared.preloadAllIcons(for: apps.map { $0.path })
     }
 
     func refreshApp(_ app: AppInfo) {

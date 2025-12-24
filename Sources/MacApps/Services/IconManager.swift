@@ -1,8 +1,9 @@
 import AppKit
+import SwiftUI
 
-/// Manages app icon loading with caching and placeholder support
+/// Manages app icon loading with caching and parallel loading
 @MainActor
-class IconManager {
+class IconManager: ObservableObject {
     static let shared = IconManager()
 
     private let cache = NSCache<NSString, NSImage>()
@@ -10,6 +11,9 @@ class IconManager {
 
     // Placeholder icon for apps while loading
     let placeholder: NSImage
+
+    // Track icon updates for SwiftUI refresh
+    @Published var loadedCount: Int = 0
 
     private init() {
         cache.countLimit = 200  // Max 200 icons
@@ -20,7 +24,7 @@ class IconManager {
             ?? NSImage(size: NSSize(width: 32, height: 32))
     }
 
-    /// Get cached icon or placeholder
+    /// Get cached icon or placeholder (synchronous)
     func icon(for path: String) -> NSImage {
         if let cached = cache.object(forKey: path as NSString) {
             return cached
@@ -33,7 +37,7 @@ class IconManager {
         cache.object(forKey: path as NSString) != nil
     }
 
-    /// Load icon asynchronously and cache it
+    /// Load icon with high priority and cache it
     func loadIcon(for path: String) async -> NSImage {
         // Return cached if available
         if let cached = cache.object(forKey: path as NSString) {
@@ -42,27 +46,51 @@ class IconManager {
 
         // Prevent duplicate loading
         guard !loadingPaths.contains(path) else {
-            return placeholder
+            // Wait a bit and check cache again
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            return cache.object(forKey: path as NSString) ?? placeholder
         }
         loadingPaths.insert(path)
 
-        // Load in background
-        let icon = await Task.detached(priority: .background) {
+        // Load with HIGH priority for visible icons
+        let icon = await Task.detached(priority: .userInitiated) {
             NSWorkspace.shared.icon(forFile: path)
         }.value
 
-        // Cache and return
+        // Cache and notify
         cache.setObject(icon, forKey: path as NSString)
         loadingPaths.remove(path)
+        loadedCount += 1
 
         return icon
     }
 
-    /// Preload icons for multiple paths in background
-    func preloadIcons(for paths: [String]) {
-        Task.detached(priority: .background) {
-            for path in paths {
-                _ = await self.loadIcon(for: path)
+    /// Batch load icons in parallel (for visible rows)
+    func loadIconsBatch(for paths: [String]) async {
+        // Filter out already cached
+        let pathsToLoad = paths.filter { !hasCachedIcon(for: $0) && !loadingPaths.contains($0) }
+
+        guard !pathsToLoad.isEmpty else { return }
+
+        // Load all in parallel with high priority
+        await withTaskGroup(of: Void.self) { group in
+            for path in pathsToLoad {
+                group.addTask {
+                    _ = await self.loadIcon(for: path)
+                }
+            }
+        }
+    }
+
+    /// Preload all icons in parallel batches
+    func preloadAllIcons(for paths: [String]) {
+        Task {
+            // Load in batches of 20 for better parallelism
+            let batchSize = 20
+            for batchStart in stride(from: 0, to: paths.count, by: batchSize) {
+                let batchEnd = min(batchStart + batchSize, paths.count)
+                let batch = Array(paths[batchStart..<batchEnd])
+                await loadIconsBatch(for: batch)
             }
         }
     }
@@ -71,5 +99,6 @@ class IconManager {
     func clearCache() {
         cache.removeAllObjects()
         loadingPaths.removeAll()
+        loadedCount = 0
     }
 }

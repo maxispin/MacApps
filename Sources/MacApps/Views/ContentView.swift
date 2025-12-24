@@ -147,12 +147,13 @@ struct AppListView: View {
 struct AppRowView: View {
     let app: AppInfo
     @EnvironmentObject var appState: AppState
+    @ObservedObject var iconManager = IconManager.shared
     @State private var icon: NSImage?
 
     var body: some View {
         HStack(spacing: 12) {
-            // App icon with async loading
-            Image(nsImage: icon ?? IconManager.shared.placeholder)
+            // App icon - updates when iconManager.loadedCount changes
+            Image(nsImage: icon ?? iconManager.icon(for: app.path))
                 .resizable()
                 .frame(width: 32, height: 32)
 
@@ -184,10 +185,14 @@ struct AppRowView: View {
             }
         }
         .padding(.vertical, 4)
-        .onAppear {
-            // Load icon when row appears
-            Task {
-                icon = await IconManager.shared.loadIcon(for: app.path)
+        .task(id: app.path) {
+            // Load icon immediately when row appears
+            icon = await iconManager.loadIcon(for: app.path)
+        }
+        .onChange(of: iconManager.loadedCount) { _, _ in
+            // Refresh icon from cache when any icon loads
+            if icon == nil {
+                icon = iconManager.icon(for: app.path)
             }
         }
         .onTapGesture(count: 2) {
