@@ -200,7 +200,7 @@ whether written or oral, regarding the Application.
 If you have any questions about this Agreement, please contact:
 
 **Japo Tyrväinen**
-Email: [your-email@example.com]
+Email: maxispin@gmail.com
 
 ---
 

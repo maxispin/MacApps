@@ -13,7 +13,7 @@ Thank you for your interest in MacApps! This document explains how you can provi
 If you encounter a bug, please report it through:
 
 1. **App Store Reviews**: Leave a review describing the issue
-2. **Email**: Contact [your-email@example.com] with:
+2. **Email**: Contact maxispin@gmail.com with:
    - macOS version
    - Steps to reproduce
    - Expected vs actual behavior
@@ -21,14 +21,14 @@ If you encounter a bug, please report it through:
 
 ### Suggesting Features
 
-We welcome feature suggestions! Please send them to [your-email@example.com] with:
+We welcome feature suggestions! Please send them to maxispin@gmail.com with:
 - Clear description of the feature
 - Use case and benefits
 - Any reference examples
 
 ### Feedback
 
-General feedback about the application can be sent to [your-email@example.com].
+General feedback about the application can be sent to maxispin@gmail.com.
 
 ## What We Cannot Accept
 
@@ -41,7 +41,7 @@ Due to the proprietary nature of this software, we cannot accept:
 ## Security Issues
 
 If you discover a security vulnerability, please report it privately:
-- Email: [your-email@example.com]
+- Email: maxispin@gmail.com
 - **Do NOT** post security issues publicly
 
 See [SECURITY.md](SECURITY.md) for our full security policy.
@@ -61,7 +61,7 @@ If you are interested in:
 - Enterprise deployments
 - Custom development
 
-Please contact [your-email@example.com] for licensing inquiries.
+Please contact maxispin@gmail.com for licensing inquiries.
 
 ## Thank You
 

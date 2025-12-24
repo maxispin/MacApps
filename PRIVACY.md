@@ -144,7 +144,7 @@ disclosures. MacApps falls under the following App Store privacy categories:
 If you have any questions about this Privacy Policy, please contact:
 
 **Japo Tyrväinen**
-Email: [your-email@example.com]
+Email: maxispin@gmail.com
 
 ## Governing Law
 
