@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1.0] - 2024-12-24
+
+### Changed
+- **Action-focused prompts**: Descriptions now emphasize VERBS (what you can DO)
+  - "Muokkaa kuvia, retusoi, rajaa, säädä värejä..." instead of "Image editor"
+  - Uses full 255 characters for maximum searchability
+- **System language to Finder**: Finder comment saved in system language (not English)
+- **README rewrite**: Explains the core problem - finding apps by what you want to DO
+
+### Fixed
+- **Menu bar app activation**: Now tries to click the menu bar icon
+- **Preferences shortcut**: Uses Cmd+, to open preferences
+
 ## [0.3.0.0] - 2024-12-24
 
 ### Added
@@ -244,6 +257,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.3.1.0 | 2024-12-24 | Action verbs, system lang to Finder, menu bar fix |
 | 0.3.0.0 | 2024-12-24 | Multi-language descriptions (system lang + English) |
 | 0.2.6.0 | 2024-12-24 | Menu bar app detection, indicator, and preferences |
 | 0.2.5.0 | 2024-12-24 | Fast parallel icon loading, UI refresh fix |

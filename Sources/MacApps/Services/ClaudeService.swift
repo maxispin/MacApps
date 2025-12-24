@@ -108,40 +108,52 @@ class ClaudeService {
             if let bundleId = bundleId {
                 prompt += " (bundle id: \(bundleId))"
             }
-            prompt += ". Reply ONLY with the description\(inLanguage), nothing else."
+            prompt += ". Focus on ACTION VERBS - what can user DO with this app. Reply ONLY with the description\(inLanguage), nothing else."
             if language == "fi" {
-                prompt += " Example: 'Kuvankäsittelyohjelma' or 'Nettiselain' or 'Koodieditori kehittäjille'"
+                prompt += " Example: 'Muokkaa kuvia, retusoi, rajaa, säädä värejä'"
             } else {
-                prompt += " Example: 'Image editing software' or 'Web browser for internet' or 'Code editor for developers'"
+                prompt += " Example: 'Edit photos, retouch, crop, adjust colors'"
             }
             return prompt
 
         case .expanded:
             var prompt = """
-            Write a detailed description (20-40 words)\(inLanguage) of the Mac application '\(escapedName)'
+            Write a searchable description (use ALL 255 characters)\(inLanguage) of the Mac application '\(escapedName)'
             """
             if let bundleId = bundleId {
                 prompt += " (bundle id: \(bundleId))"
             }
             prompt += """
             .
-            Include:
-            - Main purpose
-            - Key features or capabilities
-            - Target users or use cases
-            - Relevant search keywords\(inLanguage)
 
-            Reply ONLY with the description\(inLanguage), nothing else. Make it searchable with relevant terms\(inLanguage).
+            CRITICAL: Focus on ACTION VERBS - what can user DO with this app!
+            The user knows what they want to DO, not the app name.
+
+            Include many verbs like:
             """
             if language == "fi" {
                 prompt += """
 
-                Example: 'Ammattimainen kuvankäsittely- ja grafiikkasuunnitteluohjelma valokuvaajille ja suunnittelijoille. Tasot, suodattimet, retusointityökalut. Kuvamuokkaus, digitaalinen taide.'
+                - kirjoita, muokkaa, luo, suunnittele, piirrä, luonnostele
+                - laske, analysoi, taulukoi, kaavio, graafi
+                - tallenna, jaa, lähetä, synkronoi, varmuuskopioi
+                - etsi, selaa, järjestä, hallitse, organisoi
+                - toista, nauhoita, miksaa, editoi, leikkaa
+
+                Reply ONLY with the description in Finnish. Use ALL 255 characters.
+                Example: 'Muokkaa kuvia, retusoi valokuvia, rajaa, säädä värejä, lisää suodattimia, poista taustoja, yhdistä tasoja, luo kollaaseja, piirrä, maalaa digitaalista taidetta, suunnittele grafiikoita, vie eri formaatteihin'
                 """
             } else {
                 prompt += """
 
-                Example: 'Professional image editing and graphic design software for photographers and designers. Features layers, filters, retouching tools. Photo manipulation, digital art creation.'
+                - write, edit, create, design, draw, sketch
+                - calculate, analyze, spreadsheet, chart, graph
+                - save, share, send, sync, backup
+                - search, browse, organize, manage, sort
+                - play, record, mix, edit, cut
+
+                Reply ONLY with the description in English. Use ALL 255 characters.
+                Example: 'Edit photos, retouch images, crop, adjust colors, add filters, remove backgrounds, merge layers, create collages, draw, paint digital art, design graphics, export to various formats, batch process'
                 """
             }
             return prompt

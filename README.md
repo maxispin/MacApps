@@ -3,20 +3,44 @@
 [![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2014+-blue.svg)](https://www.apple.com/macos)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.3.0.0-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-0.3.1.0-brightgreen.svg)](CHANGELOG.md)
 
-A native macOS application that automatically generates and adds descriptive Finder comments to applications using Claude AI. Search for applications by their functionality directly in Finder.
+## The Problem
+
+You know what you want to **do**, but you can't remember which app does it.
+
+- *"I need to edit a spreadsheet"* → Which app? Numbers? Excel? LibreOffice?
+- *"I want to draw a diagram"* → OmniGraffle? Sketch? Figma?
+- *"I need to calculate something"* → Calculator? Soulver? PCalc?
+
+**MacApps solves this** by adding action-based descriptions to every application.
+
+## The Solution
+
+MacApps uses AI to generate **verb-focused descriptions** for each app:
+
+```
+Numbers: Laske, taulukoi, analysoi dataa, luo kaavioita, graafeja, budjetteja...
+Photoshop: Muokkaa kuvia, retusoi, rajaa, säädä värejä, poista taustoja...
+Terminal: Suorita komentoja, hallitse tiedostoja, automatisoi, skriptaa...
+```
+
+Now you can search in Finder/Spotlight by **what you want to do**:
+- Type "laske" → Find all calculation apps
+- Type "piirrä" → Find all drawing apps
+- Type "analysoi" → Find data analysis apps
 
 ## Features
 
-- **Visual Application Browser**: Browse all installed apps with icons and descriptions
-- **Smart Search**: Filter apps by name, description, or bundle identifier
-- **AI-Powered Descriptions**: Generate detailed descriptions using Claude AI
-- **Two Description Modes**:
-  - **Short**: Brief 5-10 word descriptions
-  - **Expanded**: Detailed 20-40 word descriptions with searchable keywords
-- **Batch Processing**: Update all apps at once or only those missing descriptions
-- **Real-time Updates**: See changes instantly in the app
+- **Action-Based Descriptions**: Focus on verbs - what you can DO with each app
+- **Multi-Language Support**: Descriptions in your system language + English
+- **Visual Application Browser**: Browse all installed apps with icons
+- **Smart Search**: Search by actions across ALL languages
+- **AI-Powered**: Uses Claude AI to generate intelligent, searchable descriptions
+- **Finder Integration**: Descriptions saved as Finder comments (255 chars)
+- **Menu Bar App Support**: Detect and launch menu bar apps
+- **Batch Processing**: Update all apps at once
+- **Persistent Cache**: Fast startup with local database
 
 ## Screenshots
 

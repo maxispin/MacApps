@@ -207,13 +207,15 @@ class AppState: ObservableObject {
             // Save to database immediately
             database.updateDescription(for: app.path, language: language, short: short, expanded: expanded)
 
-            // Use system language (or English if system) for Finder comment
+            // Use SYSTEM LANGUAGE for Finder comment (255 char limit)
             let systemLang = AppDatabase.systemLanguage
-            if language == systemLang || (language == "en" && primaryDescription == nil) {
+            if language == systemLang {
+                // Combine short + expanded, respect 255 char limit
                 if let exp = expanded {
-                    primaryDescription = "\(short) | \(exp)"
+                    let combined = "\(short) | \(exp)"
+                    primaryDescription = String(combined.prefix(255))
                 } else {
-                    primaryDescription = short
+                    primaryDescription = String(short.prefix(255))
                 }
                 lastGeneratedDescription = primaryDescription ?? short
             }
@@ -304,58 +306,86 @@ class AppState: ObservableObject {
         let url = URL(fileURLWithPath: app.path)
 
         if app.isMenuBarApp {
-            // For menu bar apps, use special launch configuration
-            let config = NSWorkspace.OpenConfiguration()
-            config.activates = true
-            config.hides = false
-
-            NSWorkspace.shared.openApplication(at: url, configuration: config) { runningApp, error in
-                if let runningApp = runningApp {
-                    // Try to activate the app and bring any windows to front
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        runningApp.activate()
-                    }
-                }
-            }
+            // For menu bar apps, launch and try to show UI
+            launchMenuBarApp(app)
         } else {
             NSWorkspace.shared.open(url)
         }
     }
 
-    /// Open preferences/settings window for menu bar apps
-    func openAppPreferences(_ app: AppInfo) {
-        guard let bundleId = app.bundleIdentifier else { return }
-
-        // First launch/activate the app
+    /// Launch menu bar app and try to trigger its UI
+    private func launchMenuBarApp(_ app: AppInfo) {
         let url = URL(fileURLWithPath: app.path)
+
+        // First, check if already running
+        let runningApps = NSWorkspace.shared.runningApplications
+        if let running = runningApps.first(where: { $0.bundleIdentifier == app.bundleIdentifier }) {
+            // Already running - try to activate
+            running.activate()
+
+            // Try clicking its menu bar icon via AppleScript
+            clickMenuBarIcon(for: app)
+            return
+        }
+
+        // Launch the app
         let config = NSWorkspace.OpenConfiguration()
         config.activates = true
 
-        NSWorkspace.shared.openApplication(at: url, configuration: config) { runningApp, error in
-            guard let runningApp = runningApp else { return }
+        NSWorkspace.shared.openApplication(at: url, configuration: config) { [weak self] runningApp, error in
+            guard runningApp != nil else { return }
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                // Activate the app
-                runningApp.activate()
+            // Wait for app to initialize, then try to click menu bar icon
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self?.clickMenuBarIcon(for: app)
+            }
+        }
+    }
 
-                // Try to open preferences via AppleScript
-                let script = """
-                tell application id "\(bundleId)"
-                    activate
-                    try
-                        tell application "System Events"
-                            tell process "\(app.name)"
-                                click menu item "Settings…" of menu "\(app.name)" of menu bar 1
-                            end tell
-                        end tell
-                    end try
-                end tell
-                """
+    /// Try to click the app's menu bar icon
+    private func clickMenuBarIcon(for app: AppInfo) {
+        // AppleScript to click the menu bar icon
+        let script = """
+        tell application "System Events"
+            tell process "\(app.name)"
+                try
+                    -- Try to click menu bar item (status item)
+                    if exists menu bar 2 then
+                        click menu bar item 1 of menu bar 2
+                    end if
+                end try
+            end tell
+        end tell
+        """
 
-                var errorDict: NSDictionary?
-                if let scriptObject = NSAppleScript(source: script) {
-                    scriptObject.executeAndReturnError(&errorDict)
-                }
+        var errorDict: NSDictionary?
+        if let scriptObject = NSAppleScript(source: script) {
+            scriptObject.executeAndReturnError(&errorDict)
+        }
+    }
+
+    /// Open preferences/settings window for menu bar apps
+    func openAppPreferences(_ app: AppInfo) {
+        // First make sure app is running
+        launchMenuBarApp(app)
+
+        // Then try Cmd+, shortcut after a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            guard let bundleId = app.bundleIdentifier else { return }
+
+            let script = """
+            tell application id "\(bundleId)"
+                activate
+            end tell
+            delay 0.3
+            tell application "System Events"
+                keystroke "," using command down
+            end tell
+            """
+
+            var errorDict: NSDictionary?
+            if let scriptObject = NSAppleScript(source: script) {
+                scriptObject.executeAndReturnError(&errorDict)
             }
         }
     }
