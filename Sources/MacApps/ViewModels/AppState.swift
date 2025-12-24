@@ -145,7 +145,15 @@ class AppState: ObservableObject {
         currentUpdateText = "Aloitetaan \(app.name)..."
         lastRequestDuration = 0
 
-        let result = await generateMultiLanguageDescriptions(for: app)
+        // Get LATEST version from apps array (with current descriptions from database)
+        let currentApp: AppInfo
+        if let index = apps.firstIndex(where: { $0.path == app.path }) {
+            currentApp = apps[index]
+        } else {
+            currentApp = app
+        }
+
+        let result = await generateMultiLanguageDescriptions(for: currentApp)
 
         if let index = apps.firstIndex(where: { $0.path == app.path }) {
             // Update descriptions in memory
@@ -159,6 +167,14 @@ class AppState: ObservableObject {
                     database.updateComment(for: app.path, comment: finderComment)
                 }
                 lastGeneratedDescription = finderComment
+
+                // Index for Spotlight - searchable without prefixes!
+                writer.indexForSpotlight(
+                    path: app.path,
+                    name: app.name,
+                    bundleIdentifier: app.bundleIdentifier,
+                    description: finderComment
+                )
             }
 
             if selectedApp?.path == app.path {
@@ -281,7 +297,8 @@ class AppState: ObservableObject {
 
     func updateAllDescriptions(onlyMissing: Bool) async {
         shouldStopUpdate = false
-        let appsToUpdate = onlyMissing ? apps.filter { !$0.hasDescription } : apps
+        // Use hasAllLanguages to check for COMPLETE descriptions (all languages, both short AND expanded)
+        let appsToUpdate = onlyMissing ? apps.filter { !$0.hasAllLanguages } : apps
         let total = appsToUpdate.count
 
         if total == 0 {
@@ -312,6 +329,13 @@ class AppState: ObservableObject {
                     if let appIndex = apps.firstIndex(where: { $0.path == app.path }) {
                         apps[appIndex].finderComment = desc
                     }
+                    // Index for Spotlight
+                    writer.indexForSpotlight(
+                        path: app.path,
+                        name: app.name,
+                        bundleIdentifier: app.bundleIdentifier,
+                        description: desc
+                    )
                     updated += 1
                 } else {
                     failed += 1

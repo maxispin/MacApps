@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3.0] - 2024-12-24
+
+### Added
+- **CoreSpotlight integration**: Descriptions now indexed for Spotlight search
+  - Search "laske" in Spotlight to find calculation apps - no prefixes needed!
+  - Keywords extracted automatically from descriptions
+  - Permanent index (never expires)
+
+### Fixed
+- **UI refresh after update**: AppInfo Equatable now compares descriptions, so UI updates properly
+- **UI counter uses hasAllLanguages**: BatchUpdateSheet shows correct count
+- **Batch update uses hasAllLanguages**: Finds apps missing ANY language or description type
+
 ## [0.3.2.0] - 2024-12-24
 
 ### Added
@@ -268,6 +281,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.3.3.0 | 2024-12-24 | CoreSpotlight integration for prefix-free search |
 | 0.3.2.0 | 2024-12-24 | Progress sheet, timing display, smart fetching |
 | 0.3.1.0 | 2024-12-24 | Action verbs, system lang to Finder, menu bar fix |
 | 0.3.0.0 | 2024-12-24 | Multi-language descriptions (system lang + English) |

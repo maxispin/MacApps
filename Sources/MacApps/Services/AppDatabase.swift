@@ -15,11 +15,17 @@ class AppDatabase {
     }
 
     /// Description stored for a specific language
-    struct LocalizedDescription: Codable {
+    struct LocalizedDescription: Codable, Equatable {
         let language: String  // e.g., "fi", "en", "sv"
         let shortDescription: String?
         let expandedDescription: String?
         var fetchedAt: Date
+
+        static func == (lhs: LocalizedDescription, rhs: LocalizedDescription) -> Bool {
+            lhs.language == rhs.language &&
+            lhs.shortDescription == rhs.shortDescription &&
+            lhs.expandedDescription == rhs.expandedDescription
+        }
     }
 
     struct StoredApp: Codable {

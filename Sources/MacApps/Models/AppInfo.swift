@@ -97,7 +97,9 @@ struct AppInfo: Identifiable, Hashable {
     }
 
     static func == (lhs: AppInfo, rhs: AppInfo) -> Bool {
-        lhs.path == rhs.path
+        lhs.path == rhs.path &&
+        lhs.finderComment == rhs.finderComment &&
+        lhs.descriptions == rhs.descriptions
     }
 }
 

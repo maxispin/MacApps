@@ -72,7 +72,7 @@ struct BatchUpdateSheet: View {
     @State private var onlyMissing = true
 
     var appsToProcess: Int {
-        onlyMissing ? appState.apps.filter { !$0.hasDescription }.count : appState.apps.count
+        onlyMissing ? appState.apps.filter { !$0.hasAllLanguages }.count : appState.apps.count
     }
 
     var body: some View {
