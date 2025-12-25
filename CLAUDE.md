@@ -47,6 +47,8 @@ When triggered for an app:
 - System (gearshape.fill, secondary)
 - Other (square.grid.2x2.fill, secondary)
 
+**FUTURE CONSIDERATION**: Apps may have multiple categories, but this should be implemented very carefully and sparingly. Most apps should have only one primary category.
+
 ## Architecture
 
 ### SwiftUI Application Structure

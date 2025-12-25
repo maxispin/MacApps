@@ -77,10 +77,20 @@ struct AppInfo: Identifiable, Hashable {
     var icon: NSImage?
     var isMenuBarApp: Bool = false  // LSUIElement = true
     var source: AppSource = .applications  // Where the app was found
-    var category: AppCategory?  // AI-generated category
+    var categories: [AppCategory] = []  // AI-generated categories (usually 1, max 2-3)
 
     // Multi-language descriptions stored in database
     var descriptions: [AppDatabase.LocalizedDescription]?
+
+    /// Primary category (first one)
+    var category: AppCategory? {
+        categories.first
+    }
+
+    /// Check if app has a specific category
+    func hasCategory(_ category: AppCategory) -> Bool {
+        categories.contains(category)
+    }
 
     var hasDescription: Bool {
         // Has description if finderComment exists OR any language description exists
@@ -168,7 +178,8 @@ struct AppInfo: Identifiable, Hashable {
     static func == (lhs: AppInfo, rhs: AppInfo) -> Bool {
         lhs.path == rhs.path &&
         lhs.finderComment == rhs.finderComment &&
-        lhs.descriptions == rhs.descriptions
+        lhs.descriptions == rhs.descriptions &&
+        lhs.categories == rhs.categories
     }
 }
 

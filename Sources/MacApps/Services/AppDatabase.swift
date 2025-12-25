@@ -37,7 +37,7 @@ class AppDatabase {
         var lastScanned: Date
         var isMenuBarApp: Bool?
         var source: AppSource?  // Where the app was found
-        var category: AppCategory?  // AI-generated category
+        var categories: [AppCategory]?  // AI-generated categories (usually 1, max 2-3)
 
         // Multi-language descriptions
         var descriptions: [LocalizedDescription]?
@@ -103,8 +103,8 @@ class AppDatabase {
                 originalComment = app.finderComment
             }
 
-            // Preserve existing category if not overwritten
-            let category = app.category ?? existingApp?.category
+            // Preserve existing categories if not overwritten
+            let categories = app.categories.isEmpty ? existingApp?.categories : app.categories
 
             return StoredApp(
                 path: app.path,
@@ -115,7 +115,7 @@ class AppDatabase {
                 lastScanned: Date(),
                 isMenuBarApp: app.isMenuBarApp,
                 source: app.source,
-                category: category,
+                categories: categories,
                 descriptions: app.descriptions ?? existingDescriptions
             )
         }
@@ -162,13 +162,27 @@ class AppDatabase {
         }
     }
 
-    /// Update category for an app
-    func updateCategory(for path: String, category: AppCategory) {
+    /// Update categories for an app
+    func updateCategories(for path: String, categories: [AppCategory]) {
         var stored = load()
         if let index = stored.firstIndex(where: { $0.path == path }) {
-            stored[index].category = category
+            stored[index].categories = categories
             stored[index].lastScanned = Date()
             saveStored(stored)
+        }
+    }
+
+    /// Add a category to an app (if not already present)
+    func addCategory(for path: String, category: AppCategory) {
+        var stored = load()
+        if let index = stored.firstIndex(where: { $0.path == path }) {
+            var categories = stored[index].categories ?? []
+            if !categories.contains(category) {
+                categories.append(category)
+                stored[index].categories = categories
+                stored[index].lastScanned = Date()
+                saveStored(stored)
+            }
         }
     }
 

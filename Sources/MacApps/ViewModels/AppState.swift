@@ -86,9 +86,9 @@ class AppState: ObservableObject {
         case .all:
             break
         case .category(let category):
-            result = result.filter { $0.category == category }
+            result = result.filter { $0.hasCategory(category) }
         case .uncategorized:
-            result = result.filter { $0.category == nil }
+            result = result.filter { $0.categories.isEmpty }
         }
 
         // Apply description filter
@@ -110,8 +110,8 @@ class AppState: ObservableObject {
                 (app.bundleIdentifier?.lowercased().contains(query) ?? false) ||
                 // Search in ALL language descriptions
                 app.allDescriptionsText.lowercased().contains(query) ||
-                // Search in category
-                (app.category?.rawValue.lowercased().contains(query) ?? false)
+                // Search in any category
+                app.categories.contains { $0.rawValue.lowercased().contains(query) }
             }
         }
 
@@ -127,11 +127,11 @@ class AppState: ObservableObject {
         return counts
     }
 
-    /// Get count of apps per category
+    /// Get count of apps per category (apps can be in multiple categories)
     var categoryCounts: [AppCategory: Int] {
         var counts: [AppCategory: Int] = [:]
         for category in AppCategory.allCases {
-            counts[category] = apps.filter { $0.category == category }.count
+            counts[category] = apps.filter { $0.hasCategory(category) }.count
         }
         return counts
     }
@@ -139,13 +139,13 @@ class AppState: ObservableObject {
     /// Categories that have apps
     var availableCategories: [AppCategory] {
         AppCategory.allCases.filter { category in
-            apps.contains { $0.category == category }
+            apps.contains { $0.hasCategory(category) }
         }
     }
 
     /// Count of uncategorized apps
     var uncategorizedCount: Int {
-        apps.filter { $0.category == nil }.count
+        apps.filter { $0.categories.isEmpty }.count
     }
 
     var claudeAvailable: Bool {
@@ -185,7 +185,7 @@ class AppState: ObservableObject {
                     icon: nil,
                     isMenuBarApp: stored.isMenuBarApp ?? false,
                     source: stored.source ?? .applications,
-                    category: stored.category,
+                    categories: stored.categories ?? [],
                     descriptions: stored.descriptions
                 )
             }.sorted { $0.name.lowercased() < $1.name.lowercased() }
@@ -272,15 +272,15 @@ class AppState: ObservableObject {
             }
 
             // Fetch category if missing
-            if apps[index].category == nil {
+            if apps[index].categories.isEmpty {
                 currentUpdateText = "[\(app.name)] Kategoria..."
                 let categoryResult = await Task.detached(priority: .userInitiated) { [claude] in
                     return claude.getCategoryWithTiming(for: app.name, bundleId: app.bundleIdentifier)
                 }.value
 
                 if let category = categoryResult.category {
-                    apps[index].category = category
-                    database.updateCategory(for: app.path, category: category)
+                    apps[index].categories = [category]
+                    database.updateCategories(for: app.path, categories: [category])
                     currentUpdateText = "[\(app.name)] Kategoria: \(category.rawValue) ✓"
                     lastRequestDuration = categoryResult.durationMs
                 }
@@ -481,7 +481,7 @@ class AppState: ObservableObject {
     /// Categorize all uncategorized apps
     /// If app has no description, fetches description too
     func categorizeAllApps() async {
-        let uncategorized = apps.filter { $0.category == nil }
+        let uncategorized = apps.filter { $0.categories.isEmpty }
         let total = uncategorized.count
 
         if total == 0 {
@@ -537,8 +537,8 @@ class AppState: ObservableObject {
             }.value
 
             if let category = categoryResult.category {
-                apps[appIndex].category = category
-                database.updateCategory(for: app.path, category: category)
+                apps[appIndex].categories = [category]
+                database.updateCategories(for: app.path, categories: [category])
                 lastGeneratedDescription = "\(app.name): \(category.rawValue)"
                 lastRequestDuration = categoryResult.durationMs
                 categorized += 1

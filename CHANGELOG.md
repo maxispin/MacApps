@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.10.0] - 2025-12-25
+
+### Added
+- **Multiple categories support**: Apps can now have multiple categories (used sparingly, most apps have 1)
+- **Fixed UI update after category fetch**: Categories now display immediately after being fetched
+
+### Changed
+- Data model changed from `category: AppCategory?` to `categories: [AppCategory]`
+- Category filter now shows apps with that category (even if they have multiple)
+- Search now matches any of the app's categories
+
 ## [0.3.9.0] - 2025-12-25
 
 ### Changed
@@ -352,6 +363,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.3.10.0 | 2025-12-25 | Multiple categories support, UI update fix |
 | 0.3.4.0 | 2025-12-25 | Large icons, Reindex progress, original comments preserved |
 | 0.3.3.0 | 2024-12-24 | CoreSpotlight integration for prefix-free search |
 | 0.3.2.0 | 2024-12-24 | Progress sheet, timing display, smart fetching |
