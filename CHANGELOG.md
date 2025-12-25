@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2.0] - 2025-12-25
+
+### Added
+- **Pricing info**: New field showing app pricing model (Free, Freemium, Paid, Subscription, Open Source)
+- **Font size control**: Cmd+/Cmd- to increase/decrease font size, Cmd+0 to reset
+- **Hide button**: Batch update modal can now be hidden while update continues in background
+
+### Fixed
+- Batch update modal height increased to prevent buttons being cut off
+
 ## [0.4.1.4] - 2025-12-25
 
 ### Changed

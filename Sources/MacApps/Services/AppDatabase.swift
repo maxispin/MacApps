@@ -39,6 +39,7 @@ class AppDatabase {
         var source: AppSource?  // Where the app was found
         var categories: [AppCategory]?  // AI-generated categories (usually 1, max 2-3)
         var functions: [String]?  // Action verbs: "edit images", "send messages", etc.
+        var pricing: AppPricing?  // Pricing model (free, paid, subscription, etc.)
 
         // Multi-language descriptions
         var descriptions: [LocalizedDescription]?
@@ -104,9 +105,10 @@ class AppDatabase {
                 originalComment = app.finderComment
             }
 
-            // Preserve existing categories and functions if not overwritten
+            // Preserve existing categories, functions, pricing if not overwritten
             let categories = app.categories.isEmpty ? existingApp?.categories : app.categories
             let functions = app.functions.isEmpty ? existingApp?.functions : app.functions
+            let pricing = app.pricing == .unknown ? existingApp?.pricing : app.pricing
 
             return StoredApp(
                 path: app.path,
@@ -119,6 +121,7 @@ class AppDatabase {
                 source: app.source,
                 categories: categories,
                 functions: functions,
+                pricing: pricing,
                 descriptions: app.descriptions ?? existingDescriptions
             )
         }
@@ -211,6 +214,16 @@ class AppDatabase {
                 }
             }
             stored[index].functions = functions
+            stored[index].lastScanned = Date()
+            saveStored(stored)
+        }
+    }
+
+    /// Update pricing for an app
+    func updatePricing(for path: String, pricing: AppPricing) {
+        var stored = load()
+        if let index = stored.firstIndex(where: { $0.path == path }) {
+            stored[index].pricing = pricing
             stored[index].lastScanned = Date()
             saveStored(stored)
         }

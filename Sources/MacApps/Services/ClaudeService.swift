@@ -66,6 +66,12 @@ class ClaudeService {
         let durationMs: Int
     }
 
+    /// Result for pricing
+    struct PricingResult {
+        let pricing: AppPricing?
+        let durationMs: Int
+    }
+
     func getDescription(for appName: String, bundleId: String?, type: DescriptionType, language: String = "en") -> String? {
         return getDescriptionWithTiming(for: appName, bundleId: bundleId, type: type, language: language).text
     }
@@ -247,6 +253,72 @@ class ClaudeService {
         }
 
         return .other
+    }
+
+    /// Get pricing model for an app
+    func getPricingWithTiming(for appName: String, bundleId: String?) -> PricingResult {
+        guard let path = claudePath else { return PricingResult(pricing: nil, durationMs: 0) }
+
+        let startTime = CFAbsoluteTimeGetCurrent()
+
+        let escapedName = appName.replacingOccurrences(of: "'", with: "\\'")
+        var prompt = "What is the pricing model of the Mac application '\(escapedName)'"
+        if let bundleId = bundleId {
+            prompt += " (bundle id: \(bundleId))"
+        }
+        prompt += """
+        ?
+
+        Reply with ONLY one of these:
+        - Free (completely free, no payment required)
+        - Freemium (free with paid upgrades/features)
+        - Paid (one-time purchase required)
+        - Subscription (recurring payment required)
+        - Open Source (free and open source)
+        - Unknown (if you cannot determine)
+
+        Reply with ONLY the pricing model, nothing else. Example: "Free"
+        """
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = ["-p", prompt]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let durationMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
+
+            if process.terminationStatus == 0 {
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                if let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) {
+                    let pricing = parsePricing(from: output)
+                    return PricingResult(pricing: pricing, durationMs: durationMs)
+                }
+            }
+            return PricingResult(pricing: nil, durationMs: durationMs)
+        } catch {
+            let durationMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
+            return PricingResult(pricing: nil, durationMs: durationMs)
+        }
+    }
+
+    /// Parse pricing from AI response
+    private func parsePricing(from text: String) -> AppPricing? {
+        let lowercased = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if lowercased.contains("open source") { return .openSource }
+        if lowercased.contains("subscription") { return .subscription }
+        if lowercased.contains("freemium") { return .freemium }
+        if lowercased.contains("paid") { return .paid }
+        if lowercased.contains("free") { return .free }
+
+        return .unknown
     }
 
     func getDescriptionWithTiming(for appName: String, bundleId: String?, type: DescriptionType, language: String = "en") -> DescriptionResult {

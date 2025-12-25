@@ -166,40 +166,46 @@ struct BatchUpdateSheet: View {
 
             // Buttons
             HStack {
-                Button(appState.isUpdating ? "Stop" : "Cancel") {
-                    if appState.isUpdating {
+                if appState.isUpdating {
+                    Button("Stop") {
                         appState.stopBatchUpdate()
-                    } else {
+                    }
+
+                    Spacer()
+
+                    Button("Hide") {
+                        appState.showBatchUpdateSheet = false
+                    }
+                    .help("Close this window. Update continues in background.")
+                } else if case .completed = appState.updateStatus {
+                    Spacer()
+                    Button("Close") {
                         appState.showBatchUpdateSheet = false
                         appState.resetUpdateStatus()
                     }
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Spacer()
-
-                if !appState.isUpdating {
-                    if case .completed = appState.updateStatus {
-                        Button("Close") {
-                            appState.showBatchUpdateSheet = false
-                            appState.resetUpdateStatus()
-                        }
-                        .keyboardShortcut(.defaultAction)
-                    } else {
-                        Button("Start Update") {
-                            Task {
-                                await appState.updateAllDescriptions(onlyMissing: onlyMissing)
-                            }
-                        }
-                        .keyboardShortcut(.defaultAction)
-                        .buttonStyle(.borderedProminent)
-                        .disabled(appsToProcess == 0)
+                    .keyboardShortcut(.defaultAction)
+                } else {
+                    Button("Cancel") {
+                        appState.showBatchUpdateSheet = false
+                        appState.resetUpdateStatus()
                     }
+                    .keyboardShortcut(.cancelAction)
+
+                    Spacer()
+
+                    Button("Start Update") {
+                        Task {
+                            await appState.updateAllDescriptions(onlyMissing: onlyMissing)
+                        }
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(appsToProcess == 0)
                 }
             }
             .padding(16)
         }
-        .frame(width: 500, height: 400)
+        .frame(width: 500, height: 450)
     }
 }
 

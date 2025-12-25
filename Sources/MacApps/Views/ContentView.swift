@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var fontSettings: FontSettings
 
     var body: some View {
         NavigationSplitView {
@@ -22,6 +23,24 @@ struct ContentView: View {
         }
         .task {
             await appState.loadFromCache()
+        }
+        .environment(\.sizeCategory, fontSettings.dynamicTypeSize)
+    }
+}
+
+extension FontSettings {
+    var dynamicTypeSize: ContentSizeCategory {
+        switch fontScale {
+        case ..<0.7: return .extraSmall
+        case 0.7..<0.85: return .small
+        case 0.85..<0.95: return .medium
+        case 0.95..<1.05: return .large
+        case 1.05..<1.15: return .extraLarge
+        case 1.15..<1.3: return .extraExtraLarge
+        case 1.3..<1.5: return .extraExtraExtraLarge
+        case 1.5..<1.7: return .accessibilityMedium
+        case 1.7..<1.9: return .accessibilityLarge
+        default: return .accessibilityExtraLarge
         }
     }
 }

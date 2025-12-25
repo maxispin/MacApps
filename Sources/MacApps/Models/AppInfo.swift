@@ -48,6 +48,38 @@ enum AppCategory: String, Codable, CaseIterable {
     }
 }
 
+/// Pricing model for an application
+enum AppPricing: String, Codable, CaseIterable {
+    case free = "Free"
+    case freemium = "Freemium"
+    case paid = "Paid"
+    case subscription = "Subscription"
+    case openSource = "Open Source"
+    case unknown = "Unknown"
+
+    var icon: String {
+        switch self {
+        case .free: return "gift.fill"
+        case .freemium: return "star.leadinghalf.filled"
+        case .paid: return "dollarsign.circle.fill"
+        case .subscription: return "repeat.circle.fill"
+        case .openSource: return "chevron.left.forwardslash.chevron.right"
+        case .unknown: return "questionmark.circle"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .free: return .green
+        case .freemium: return .orange
+        case .paid: return .blue
+        case .subscription: return .purple
+        case .openSource: return .mint
+        case .unknown: return .secondary
+        }
+    }
+}
+
 /// Source location where an application was found
 enum AppSource: String, Codable, CaseIterable {
     case applications = "Applications"          // /Applications
@@ -79,6 +111,7 @@ struct AppInfo: Identifiable, Hashable {
     var source: AppSource = .applications  // Where the app was found
     var categories: [AppCategory] = []  // AI-generated categories (usually 1, max 2-3)
     var functions: [String] = []  // Action verbs: "edit images", "send messages", etc.
+    var pricing: AppPricing = .unknown  // Pricing model
 
     // Multi-language descriptions stored in database
     var descriptions: [AppDatabase.LocalizedDescription]?
@@ -181,7 +214,8 @@ struct AppInfo: Identifiable, Hashable {
         lhs.finderComment == rhs.finderComment &&
         lhs.descriptions == rhs.descriptions &&
         lhs.categories == rhs.categories &&
-        lhs.functions == rhs.functions
+        lhs.functions == rhs.functions &&
+        lhs.pricing == rhs.pricing
     }
 }
 

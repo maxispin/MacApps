@@ -208,6 +208,7 @@ class AppState: ObservableObject {
                     source: stored.source ?? .applications,
                     categories: stored.categories ?? [],
                     functions: stored.functions ?? [],
+                    pricing: stored.pricing ?? .unknown,
                     descriptions: stored.descriptions
                 )
             }.sorted { $0.name.lowercased() < $1.name.lowercased() }
@@ -270,6 +271,7 @@ class AppState: ObservableObject {
         apps[index].descriptions = nil
         apps[index].categories = []
         apps[index].functions = []
+        apps[index].pricing = .unknown
 
         // Generate fresh descriptions
         currentUpdateText = "[\(app.name)] Descriptions..."
@@ -312,6 +314,18 @@ class AppState: ObservableObject {
             apps[index].functions = functionsResult.functions
             database.updateFunctions(for: app.path, functions: functionsResult.functions)
             currentUpdateText = "[\(app.name)] \(functionsResult.functions.count) functions ✓"
+        }
+
+        // Generate fresh pricing
+        currentUpdateText = "[\(app.name)] Pricing..."
+        let pricingResult = await Task.detached(priority: .userInitiated) { [claude] in
+            return claude.getPricingWithTiming(for: app.name, bundleId: app.bundleIdentifier)
+        }.value
+
+        if let pricing = pricingResult.pricing {
+            apps[index].pricing = pricing
+            database.updatePricing(for: app.path, pricing: pricing)
+            currentUpdateText = "[\(app.name)] Pricing: \(pricing.rawValue) ✓"
         }
 
         if selectedApp?.path == app.path {
@@ -389,6 +403,21 @@ class AppState: ObservableObject {
                     database.updateFunctions(for: app.path, functions: functionsResult.functions)
                     currentUpdateText = "[\(app.name)] \(functionsResult.functions.count) toimintoa ✓"
                     lastRequestDuration = functionsResult.durationMs
+                }
+            }
+
+            // Fetch pricing if missing
+            if apps[index].pricing == .unknown {
+                currentUpdateText = "[\(app.name)] Hinnoittelu..."
+                let pricingResult = await Task.detached(priority: .userInitiated) { [claude] in
+                    return claude.getPricingWithTiming(for: app.name, bundleId: app.bundleIdentifier)
+                }.value
+
+                if let pricing = pricingResult.pricing {
+                    apps[index].pricing = pricing
+                    database.updatePricing(for: app.path, pricing: pricing)
+                    currentUpdateText = "[\(app.name)] Hinnoittelu: \(pricing.rawValue) ✓"
+                    lastRequestDuration = pricingResult.durationMs
                 }
             }
 

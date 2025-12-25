@@ -35,7 +35,7 @@ struct DetailView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(nsColor: .windowBackgroundColor))
-            .id("\(app.path)-\(app.categories.map { $0.rawValue }.joined())-\(app.descriptions?.count ?? 0)-\(app.functions.count)")  // Force refresh when app data changes
+            .id("\(app.path)-\(app.categories.map { $0.rawValue }.joined())-\(app.descriptions?.count ?? 0)-\(app.functions.count)-\(app.pricing.rawValue)")  // Force refresh when app data changes
         } else {
             ContentUnavailableView {
                 Label("Select an Application", systemImage: "app.dashed")
@@ -326,6 +326,22 @@ struct AppInfoSection: View {
                         }
                     } else {
                         Text("Not categorized")
+                            .foregroundColor(.secondary)
+                            .italic()
+                    }
+                }
+
+                GridRow {
+                    Text("Pricing:")
+                        .foregroundColor(.secondary)
+                    if app.pricing != .unknown {
+                        HStack(spacing: 4) {
+                            Image(systemName: app.pricing.icon)
+                                .foregroundColor(app.pricing.color)
+                            Text(app.pricing.rawValue)
+                        }
+                    } else {
+                        Text("Unknown")
                             .foregroundColor(.secondary)
                             .italic()
                     }
