@@ -2,7 +2,7 @@
 
 **MacApps - Application Description Manager**
 
-Last Updated: December 24, 2024
+Last Updated: December 24, 2025
 
 PLEASE READ THIS END USER LICENSE AGREEMENT ("AGREEMENT") CAREFULLY BEFORE
 DOWNLOADING, INSTALLING, OR USING MACAPPS ("APPLICATION"). BY DOWNLOADING,
@@ -11,7 +11,7 @@ THIS AGREEMENT.
 
 ## 1. LICENSE GRANT
 
-Subject to the terms of this Agreement, Japo Tyrväinen ("Licensor") grants
+Subject to the terms of this Agreement, J.I.Edelmann ("Licensor") grants
 you a limited, non-exclusive, non-transferable, revocable license to download,
 install, and use the Application on Apple-branded devices that you own or
 control, solely for your personal, non-commercial purposes.
@@ -199,7 +199,7 @@ whether written or oral, regarding the Application.
 
 If you have any questions about this Agreement, please contact:
 
-**Japo Tyrväinen**
+**J.I.Edelmann**
 Email: maxispin@gmail.com
 
 ---

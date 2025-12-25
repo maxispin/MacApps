@@ -1,14 +1,35 @@
 import Foundation
 import SwiftUI
 
+/// Source location where an application was found
+enum AppSource: String, Codable, CaseIterable {
+    case applications = "Applications"          // /Applications
+    case userApplications = "User Apps"         // ~/Applications
+    case systemApplications = "System"          // /System/Applications
+    case homebrew = "Homebrew"                  // /opt/homebrew/Caskroom
+    case setapp = "Setapp"                      // ~/Library/Application Support/Setapp
+
+    var icon: String {
+        switch self {
+        case .applications: return "folder.fill"
+        case .userApplications: return "person.fill"
+        case .systemApplications: return "gearshape.fill"
+        case .homebrew: return "mug.fill"
+        case .setapp: return "s.square.fill"
+        }
+    }
+}
+
 struct AppInfo: Identifiable, Hashable {
     let id = UUID()
     let name: String
     let path: String
     let bundleIdentifier: String?
     var finderComment: String?  // Primary (written to Finder)
+    var originalFinderComment: String?  // Original comment before MacApps modified it
     var icon: NSImage?
     var isMenuBarApp: Bool = false  // LSUIElement = true
+    var source: AppSource = .applications  // Where the app was found
 
     // Multi-language descriptions stored in database
     var descriptions: [AppDatabase.LocalizedDescription]?

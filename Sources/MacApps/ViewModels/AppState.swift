@@ -10,6 +10,7 @@ class AppState: ObservableObject {
     @Published var selectedApp: AppInfo?
     @Published var selectedDescriptionType: DescriptionType = .expanded
     @Published var filterOption: FilterOption = .all
+    @Published var sourceFilter: SourceFilter = .all
     @Published var showBatchUpdateSheet = false
     @Published var showProgressSheet = false  // Show progress for single app too
 
@@ -30,9 +31,42 @@ class AppState: ObservableObject {
         case withoutDescription = "Without Description"
     }
 
+    enum SourceFilter: Hashable, CaseIterable {
+        case all
+        case hideSetapp
+        case onlySetapp
+        case source(AppSource)
+
+        static var allCases: [SourceFilter] {
+            return [.all, .hideSetapp, .onlySetapp]
+        }
+
+        var displayName: String {
+            switch self {
+            case .all: return "All Sources"
+            case .hideSetapp: return "Hide Setapp"
+            case .onlySetapp: return "Only Setapp"
+            case .source(let s): return s.rawValue
+            }
+        }
+    }
+
     var filteredApps: [AppInfo] {
         var result = apps
 
+        // Apply source filter first
+        switch sourceFilter {
+        case .all:
+            break
+        case .hideSetapp:
+            result = result.filter { $0.source != .setapp }
+        case .onlySetapp:
+            result = result.filter { $0.source == .setapp }
+        case .source(let source):
+            result = result.filter { $0.source == source }
+        }
+
+        // Apply description filter
         switch filterOption {
         case .all:
             break
@@ -55,6 +89,15 @@ class AppState: ObservableObject {
         }
 
         return result
+    }
+
+    /// Get count of apps per source
+    var sourceCounts: [AppSource: Int] {
+        var counts: [AppSource: Int] = [:]
+        for source in AppSource.allCases {
+            counts[source] = apps.filter { $0.source == source }.count
+        }
+        return counts
     }
 
     var claudeAvailable: Bool {
@@ -90,8 +133,10 @@ class AppState: ObservableObject {
                     path: stored.path,
                     bundleIdentifier: stored.bundleIdentifier,
                     finderComment: stored.finderComment,
+                    originalFinderComment: stored.originalFinderComment,
                     icon: nil,
                     isMenuBarApp: stored.isMenuBarApp ?? false,
+                    source: stored.source ?? .applications,
                     descriptions: stored.descriptions
                 )
             }.sorted { $0.name.lowercased() < $1.name.lowercased() }
@@ -366,10 +411,48 @@ class AppState: ObservableObject {
 
     func clearCache() {
         database.clear()
+        writer.clearSpotlightIndex()
+    }
+
+    /// Reindex all apps with descriptions to Spotlight
+    func reindexSpotlight() async {
+        let appsWithDescriptions = apps.filter { $0.hasDescription }
+        let total = appsWithDescriptions.count
+
+        if total == 0 {
+            currentUpdateText = "No apps to index"
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            currentUpdateText = ""
+            return
+        }
+
+        showProgressSheet = true
+        var indexedCount = 0
+
+        for app in appsWithDescriptions {
+            if let description = app.displayDescription {
+                currentUpdateText = "Indexing \(app.name)... (\(indexedCount + 1)/\(total))"
+
+                writer.indexForSpotlight(
+                    path: app.path,
+                    name: app.name,
+                    bundleIdentifier: app.bundleIdentifier,
+                    description: description
+                )
+                indexedCount += 1
+            }
+        }
+
+        currentUpdateText = "Indexed \(indexedCount) apps for Spotlight!"
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        showProgressSheet = false
+        currentUpdateText = ""
     }
 
     func openInFinder(_ app: AppInfo) {
-        NSWorkspace.shared.selectFile(app.path, inFileViewerRootedAtPath: "/Applications")
+        // Get the parent directory of the app
+        let parentPath = (app.path as NSString).deletingLastPathComponent
+        NSWorkspace.shared.selectFile(app.path, inFileViewerRootedAtPath: parentPath)
     }
 
     func launchApp(_ app: AppInfo) {

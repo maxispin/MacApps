@@ -2,9 +2,9 @@
 
 **MacApps - Application Description Manager**
 
-Last Updated: December 24, 2024
+Last Updated: December 24, 2025
 
-Japo Tyrväinen ("we," "our," or "us") is committed to protecting your privacy.
+J.I.Edelmann ("we," "our," or "us") is committed to protecting your privacy.
 This Privacy Policy explains how MacApps ("Application") handles information
 when you use our macOS application.
 
@@ -143,7 +143,7 @@ disclosures. MacApps falls under the following App Store privacy categories:
 
 If you have any questions about this Privacy Policy, please contact:
 
-**Japo Tyrväinen**
+**J.I.Edelmann**
 Email: maxispin@gmail.com
 
 ## Governing Law

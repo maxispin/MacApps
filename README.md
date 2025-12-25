@@ -3,7 +3,7 @@
 [![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2014+-blue.svg)](https://www.apple.com/macos)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.3.3.0-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-0.3.5.0-brightgreen.svg)](CHANGELOG.md)
 
 ## The Problem
 
@@ -26,30 +26,35 @@ Terminal: Run commands, manage files, automate tasks, write scripts...
 ```
 
 Now you can search in Spotlight by **what you want to do**:
-- Type "calculate" → Find all calculation apps
-- Type "draw" → Find all drawing apps
-- Type "analyze" → Find data analysis apps
+- Type `calculate app` → Find all calculation apps
+- Type `draw app` → Find all drawing apps
+- Type `edit images app` → Find image editing apps
+
+Or use the `comment:` prefix for exact matches:
+- `comment:calculate` → Apps with "calculate" in description
 
 ## Features
 
 - **Action-Based Descriptions**: Focus on verbs - what you can DO with each app
-- **Spotlight Integration**: Descriptions indexed via CoreSpotlight - search without prefixes!
 - **Multi-Language Support**: Descriptions in your system language + English
-- **Visual Application Browser**: Browse all installed apps with icons
+- **Visual Application Browser**: Browse all installed apps with icons (128x128 in detail view)
 - **Smart Search**: Search by actions across ALL languages
 - **AI-Powered**: Uses Claude AI to generate intelligent, searchable descriptions
 - **Finder Integration**: Descriptions saved as Finder comments (255 chars)
+- **Spotlight Indexing**: CoreSpotlight integration for prefix-free search (App Store version)
 - **Menu Bar App Support**: Detect and launch menu bar apps
-- **Batch Processing**: Update all apps at once
+- **Batch Processing**: Update all apps at once with progress tracking
 - **Persistent Cache**: Fast startup with local database
+- **Original Comments Preserved**: Stores original Finder comments before modification
 
 ## Screenshots
 
 The application features a clean, native macOS interface with:
 - Sidebar listing all applications with icons
 - Search and filter controls
-- Detailed view for selected application
-- One-click description generation
+- Detailed view with large app icon
+- One-click description generation with progress display
+- Reindex Spotlight button
 
 ## Requirements
 
@@ -78,9 +83,9 @@ swift run
 
 1. **Launch MacApps** - The app automatically scans your `/Applications` folder
 2. **Browse or Search** - Use the sidebar to find apps, or search by name/description
-3. **Select an App** - Click to view details and current Finder comment
+3. **Select an App** - Click to view details with large icon
 4. **Generate Description** - Click "Generate Description" to create AI descriptions
-5. **Search in Spotlight** - Just type what you want to do - no prefixes needed!
+5. **Search in Spotlight** - Type `keyword app` (e.g., `calculate app`) to find apps
 
 ### Keyboard Shortcuts
 
@@ -93,14 +98,22 @@ swift run
 Right-click any app in the list for quick actions:
 - Open in Finder
 - Launch App
-- Update Description
-- Refresh Comment
+- Open Preferences (for menu bar apps)
+- Generate Description
 
 ### Batch Update
 
 Use the "Update All" toolbar button to:
 - Update all apps at once
-- Update only apps without descriptions
+- Update only apps with missing descriptions
+- View real-time progress with timing info
+
+### Reindex Spotlight
+
+Use the "Reindex Spotlight" toolbar button to:
+- Index all existing descriptions for Spotlight
+- Shows progress during indexing
+- Note: Requires signed app for prefix-free search
 
 ## How It Works
 
@@ -108,7 +121,7 @@ Use the "Update All" toolbar button to:
 2. **Display**: Shows apps in a searchable, filterable list
 3. **Generate**: Sends app info to Claude CLI for AI description
 4. **Write**: Saves description to Finder comment + CoreSpotlight index
-5. **Search**: Spotlight finds apps by what they DO - no prefixes needed!
+5. **Search**: Type `keyword app` in Spotlight to find apps by what they do
 
 ## Security & Privacy
 
@@ -148,8 +161,10 @@ MacApps/
 │   │   └── AppInfo.swift         # Data models
 │   ├── Services/
 │   │   ├── AppScanner.swift      # App discovery
+│   │   ├── AppDatabase.swift     # JSON persistence
 │   │   ├── ClaudeService.swift   # AI integration
-│   │   └── MetadataWriter.swift  # Finder comments + Spotlight
+│   │   ├── MetadataWriter.swift  # Finder comments + Spotlight
+│   │   └── IconManager.swift     # Icon caching
 │   ├── ViewModels/
 │   │   └── AppState.swift        # App state management
 │   └── Views/
@@ -157,6 +172,7 @@ MacApps/
 │       ├── DetailView.swift      # App detail panel
 │       └── ToolbarView.swift     # Toolbar controls
 ├── README.md
+├── CLAUDE.md
 ├── LICENSE
 ├── EULA.md
 ├── PRIVACY.md
@@ -179,6 +195,11 @@ Grant automation permissions in System Settings → Privacy & Security → Autom
 - Apps with special characters in names may need escaping
 - Some apps may not have valid Info.plist files
 
+### Spotlight search tips
+- Use `keyword app` format (e.g., `calculate app`, `edit images app`)
+- For exact matches, use `comment:keyword` prefix
+- CoreSpotlight prefix-free search requires signed/notarized app (App Store version)
+
 ## Legal
 
 - **License**: [Proprietary - All Rights Reserved](LICENSE)
@@ -192,9 +213,9 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## Author
 
-**Japo Tyrväinen**
+**J.I.Edelmann**
 
-Copyright © 2024 Japo Tyrväinen. All rights reserved.
+Copyright © 2025 J.I.Edelmann. All rights reserved.
 
 ## Acknowledgments
 

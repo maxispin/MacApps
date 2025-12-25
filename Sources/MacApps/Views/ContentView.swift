@@ -35,10 +35,23 @@ struct SidebarView: View {
             SearchBar(text: $appState.searchText)
                 .padding()
 
-            // Filter picker
+            // Description filter picker
             Picker(selection: $appState.filterOption) {
                 ForEach(AppState.FilterOption.allCases, id: \.self) { option in
                     Text(option.rawValue).tag(option)
+                }
+            } label: {
+                EmptyView()
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .padding(.horizontal)
+            .padding(.bottom, 4)
+
+            // Source filter picker
+            Picker(selection: $appState.sourceFilter) {
+                ForEach(AppState.SourceFilter.allCases, id: \.self) { filter in
+                    Text(filter.displayName).tag(filter)
                 }
             } label: {
                 EmptyView()
@@ -181,6 +194,14 @@ struct AppRowView: View {
 
             Spacer()
 
+            // Source indicator
+            if app.source != .applications {
+                Image(systemName: app.source.icon)
+                    .foregroundColor(.secondary)
+                    .font(.caption2)
+                    .help(app.source.rawValue)
+            }
+
             // Menu bar app indicator
             if app.isMenuBarApp {
                 Image(systemName: "menubar.rectangle")
@@ -232,9 +253,6 @@ struct AppRowView: View {
                 Task {
                     await appState.updateSingleApp(app)
                 }
-            }
-            Button("Refresh from Finder") {
-                appState.refreshApp(app)
             }
         }
     }

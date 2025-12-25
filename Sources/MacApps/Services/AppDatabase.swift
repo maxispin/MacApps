@@ -33,8 +33,10 @@ class AppDatabase {
         let name: String
         let bundleIdentifier: String?
         var finderComment: String?  // Keep for backwards compatibility (written to Finder)
+        var originalFinderComment: String?  // Original comment before MacApps modified it
         var lastScanned: Date
         var isMenuBarApp: Bool?
+        var source: AppSource?  // Where the app was found
 
         // Multi-language descriptions
         var descriptions: [LocalizedDescription]?
@@ -80,21 +82,35 @@ class AppDatabase {
     }
 
     func save(apps: [AppInfo]) {
-        // Load existing to preserve descriptions
+        // Load existing to preserve descriptions and original comments
         let existing = load()
         let existingByPath = Dictionary(uniqueKeysWithValues: existing.map { ($0.path, $0) })
 
         let storedApps = apps.map { app in
-            // Preserve existing descriptions if any
-            let existingDescriptions = existingByPath[app.path]?.descriptions
+            // Preserve existing data
+            let existingApp = existingByPath[app.path]
+            let existingDescriptions = existingApp?.descriptions
+
+            // Preserve original comment - only set on first scan (before we modify it)
+            // If app is new (not in existing) and has a finderComment, that's the original
+            let originalComment: String?
+            if let existing = existingApp {
+                // Keep existing original
+                originalComment = existing.originalFinderComment
+            } else {
+                // New app - save current comment as original (if any)
+                originalComment = app.finderComment
+            }
 
             return StoredApp(
                 path: app.path,
                 name: app.name,
                 bundleIdentifier: app.bundleIdentifier,
                 finderComment: app.finderComment,
+                originalFinderComment: originalComment,
                 lastScanned: Date(),
                 isMenuBarApp: app.isMenuBarApp,
+                source: app.source,
                 descriptions: app.descriptions ?? existingDescriptions
             )
         }

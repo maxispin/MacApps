@@ -56,15 +56,16 @@ struct AppDetailView: View {
 
 struct AppHeaderView: View {
     let app: AppInfo
+    @ObservedObject var iconManager = IconManager.shared
+    @State private var icon: NSImage?
 
     var body: some View {
-        HStack(spacing: 16) {
-            if let icon = app.icon {
-                Image(nsImage: icon)
-                    .resizable()
-                    .frame(width: 80, height: 80)
-                    .shadow(radius: 4)
-            }
+        HStack(spacing: 20) {
+            // Large app icon (128x128)
+            Image(nsImage: icon ?? iconManager.icon(for: app.path))
+                .resizable()
+                .frame(width: 128, height: 128)
+                .shadow(radius: 6)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(app.name)
@@ -96,6 +97,9 @@ struct AppHeaderView: View {
             }
 
             Spacer()
+        }
+        .task(id: app.path) {
+            icon = await iconManager.loadIcon(for: app.path)
         }
     }
 }
@@ -216,13 +220,6 @@ struct DescriptionSection: View {
                 }
                 .disabled(isUpdating || !appState.claudeAvailable)
 
-                Button(action: {
-                    appState.refreshApp(app)
-                }) {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .help("Refresh from Finder")
-
                 Spacer()
 
                 if showSuccess {
@@ -285,6 +282,25 @@ struct AppInfoSection: View {
                             .foregroundColor(.secondary)
                         Text(bundleId)
                             .textSelection(.enabled)
+                    }
+                }
+
+                GridRow {
+                    Text("Source:")
+                        .foregroundColor(.secondary)
+                    HStack(spacing: 4) {
+                        Image(systemName: app.source.icon)
+                        Text(app.source.rawValue)
+                    }
+                }
+
+                if let original = app.originalFinderComment, !original.isEmpty {
+                    GridRow {
+                        Text("Original Comment:")
+                            .foregroundColor(.secondary)
+                        Text(original)
+                            .textSelection(.enabled)
+                            .foregroundColor(.orange)
                     }
                 }
             }

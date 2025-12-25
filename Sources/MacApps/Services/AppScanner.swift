@@ -3,66 +3,162 @@ import AppKit
 
 class AppScanner {
 
+    // MARK: - Scan Locations
+
+    /// All locations to scan for applications
+    private var scanLocations: [(path: String, source: AppSource)] {
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
+        return [
+            ("/Applications", .applications),
+            ("\(homeDir)/Applications", .userApplications),
+            ("/System/Applications", .systemApplications),
+            ("/opt/homebrew/Caskroom", .homebrew),
+            ("\(homeDir)/Library/Application Support/Setapp/Setapp/Applications", .setapp)
+        ]
+    }
+
     func scanApplications() -> [AppInfo] {
-        let fileManager = FileManager.default
-        let applicationsPath = "/Applications"
-
-        guard let contents = try? fileManager.contentsOfDirectory(atPath: applicationsPath) else {
-            return []
-        }
-
         var apps: [AppInfo] = []
 
-        for item in contents where item.hasSuffix(".app") {
-            let appPath = "\(applicationsPath)/\(item)"
-            let appName = String(item.dropLast(4))
-
-            let bundleId = getBundleIdentifier(appPath: appPath)
-            let existingComment = getFinderComment(path: appPath)
-            let icon = getAppIcon(appPath: appPath)
-
-            apps.append(AppInfo(
-                name: appName,
-                path: appPath,
-                bundleIdentifier: bundleId,
-                finderComment: existingComment,
-                icon: icon
-            ))
+        for location in scanLocations {
+            let scannedApps = scanDirectory(path: location.path, source: location.source, withIcons: true)
+            apps.append(contentsOf: scannedApps)
         }
+
+        // Remove duplicates (same bundle ID from different locations)
+        apps = removeDuplicates(apps)
 
         return apps.sorted { $0.name.lowercased() < $1.name.lowercased() }
     }
 
     // Fast scan without icons for quick initial display
     func scanApplicationsWithoutIcons() -> [AppInfo] {
-        let fileManager = FileManager.default
-        let applicationsPath = "/Applications"
+        var apps: [AppInfo] = []
 
-        guard let contents = try? fileManager.contentsOfDirectory(atPath: applicationsPath) else {
+        for location in scanLocations {
+            let scannedApps = scanDirectory(path: location.path, source: location.source, withIcons: false)
+            apps.append(contentsOf: scannedApps)
+        }
+
+        // Remove duplicates (same bundle ID from different locations)
+        apps = removeDuplicates(apps)
+
+        return apps.sorted { $0.name.lowercased() < $1.name.lowercased() }
+    }
+
+    /// Scan a single directory for .app bundles
+    private func scanDirectory(path: String, source: AppSource, withIcons: Bool) -> [AppInfo] {
+        let fileManager = FileManager.default
+
+        // For Homebrew Caskroom, we need to scan subdirectories
+        if source == .homebrew {
+            return scanHomebrewCaskroom(path: path, withIcons: withIcons)
+        }
+
+        guard let contents = try? fileManager.contentsOfDirectory(atPath: path) else {
             return []
         }
 
         var apps: [AppInfo] = []
 
         for item in contents where item.hasSuffix(".app") {
-            let appPath = "\(applicationsPath)/\(item)"
+            let appPath = "\(path)/\(item)"
             let appName = String(item.dropLast(4))
 
             let bundleId = getBundleIdentifier(appPath: appPath)
             let existingComment = getFinderComment(path: appPath)
             let isMenuBar = isMenuBarApp(appPath: appPath)
+            let icon = withIcons ? getAppIcon(appPath: appPath) : nil
 
             apps.append(AppInfo(
                 name: appName,
                 path: appPath,
                 bundleIdentifier: bundleId,
                 finderComment: existingComment,
-                icon: nil,  // Skip icon loading for fast startup
-                isMenuBarApp: isMenuBar
+                icon: icon,
+                isMenuBarApp: isMenuBar,
+                source: source
             ))
         }
 
-        return apps.sorted { $0.name.lowercased() < $1.name.lowercased() }
+        return apps
+    }
+
+    /// Scan Homebrew Caskroom structure: /opt/homebrew/Caskroom/{cask}/{version}/{App}.app
+    private func scanHomebrewCaskroom(path: String, withIcons: Bool) -> [AppInfo] {
+        let fileManager = FileManager.default
+        var apps: [AppInfo] = []
+
+        guard let casks = try? fileManager.contentsOfDirectory(atPath: path) else {
+            return []
+        }
+
+        for cask in casks {
+            let caskPath = "\(path)/\(cask)"
+            guard let versions = try? fileManager.contentsOfDirectory(atPath: caskPath) else {
+                continue
+            }
+
+            for version in versions {
+                let versionPath = "\(caskPath)/\(version)"
+                guard let items = try? fileManager.contentsOfDirectory(atPath: versionPath) else {
+                    continue
+                }
+
+                for item in items where item.hasSuffix(".app") {
+                    let appPath = "\(versionPath)/\(item)"
+                    let appName = String(item.dropLast(4))
+
+                    let bundleId = getBundleIdentifier(appPath: appPath)
+                    let existingComment = getFinderComment(path: appPath)
+                    let isMenuBar = isMenuBarApp(appPath: appPath)
+                    let icon = withIcons ? getAppIcon(appPath: appPath) : nil
+
+                    apps.append(AppInfo(
+                        name: appName,
+                        path: appPath,
+                        bundleIdentifier: bundleId,
+                        finderComment: existingComment,
+                        icon: icon,
+                        isMenuBarApp: isMenuBar,
+                        source: .homebrew
+                    ))
+                }
+            }
+        }
+
+        return apps
+    }
+
+    /// Remove duplicate apps (same bundle ID), keeping the one from most specific source
+    private func removeDuplicates(_ apps: [AppInfo]) -> [AppInfo] {
+        var seen: [String: AppInfo] = [:]
+
+        // Priority: Applications > User Apps > Homebrew > System > Setapp
+        let priority: [AppSource: Int] = [
+            .applications: 5,
+            .userApplications: 4,
+            .homebrew: 3,
+            .systemApplications: 2,
+            .setapp: 1
+        ]
+
+        for app in apps {
+            let key = app.bundleIdentifier ?? app.path
+
+            if let existing = seen[key] {
+                // Keep the one with higher priority
+                let existingPriority = priority[existing.source] ?? 0
+                let newPriority = priority[app.source] ?? 0
+                if newPriority > existingPriority {
+                    seen[key] = app
+                }
+            } else {
+                seen[key] = app
+            }
+        }
+
+        return Array(seen.values)
     }
 
     private func getInfoPlist(appPath: String) -> [String: Any]? {

@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.5.0] - 2025-12-25
+
+### Added
+- **Multi-location scanning**: Now scans apps from multiple sources:
+  - `/Applications` (standard apps)
+  - `~/Applications` (user-installed apps)
+  - `/System/Applications` (system apps)
+  - `/opt/homebrew/Caskroom` (Homebrew Cask apps)
+  - `~/Library/Application Support/Setapp/Setapp/Applications` (Setapp apps)
+- **Source filtering**: Filter apps by source (All Sources, Hide Setapp, Only Setapp)
+- **Source indicator**: Shows source icon in app list for non-standard locations
+- **Source display in detail view**: Shows where each app was found
+
+### Changed
+- App list now shows icons for different sources (folder, person, gear, mug, S)
+- "Open in Finder" now opens correct parent directory for any source
+- Duplicate apps (same bundle ID) are automatically removed, keeping highest priority
+
+## [0.3.4.0] - 2025-12-25
+
+### Added
+- **Large app icon**: Detail view now shows 128x128 app icon next to name
+- **Reindex Spotlight with progress**: Shows indexing progress in sheet
+- **Original Finder comment preservation**: Stores original comments before modification
+- **CLAUDE.md updated**: Comprehensive AI assistant guidelines with validation practices
+
+### Changed
+- Removed "Refresh from Finder" button (not useful)
+- Updated all copyright years to 2025
+- Updated README with accurate Spotlight search instructions (`comment:keyword`)
+- Author name corrected to J.I.Edelmann in all files
+
 ## [0.3.3.0] - 2024-12-24
 
 ### Added
@@ -281,6 +313,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.3.4.0 | 2025-12-25 | Large icons, Reindex progress, original comments preserved |
 | 0.3.3.0 | 2024-12-24 | CoreSpotlight integration for prefix-free search |
 | 0.3.2.0 | 2024-12-24 | Progress sheet, timing display, smart fetching |
 | 0.3.1.0 | 2024-12-24 | Action verbs, system lang to Finder, menu bar fix |

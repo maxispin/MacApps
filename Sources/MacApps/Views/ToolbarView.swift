@@ -24,6 +24,18 @@ struct ToolbarView: ToolbarContent {
             }
             .help("Generate descriptions for all apps")
             .disabled(!appState.claudeAvailable || appState.scanStatus == .scanning || appState.isUpdating)
+
+            Divider()
+
+            Button(action: {
+                Task {
+                    await appState.reindexSpotlight()
+                }
+            }) {
+                Label("Reindex Spotlight", systemImage: "magnifyingglass")
+            }
+            .help("Reindex all descriptions for Spotlight search")
+            .disabled(appState.scanStatus == .scanning || appState.isUpdating || appState.showProgressSheet)
         }
 
         ToolbarItem(placement: .status) {

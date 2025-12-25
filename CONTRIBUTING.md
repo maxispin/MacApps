@@ -4,7 +4,7 @@ Thank you for your interest in MacApps! This document explains how you can provi
 
 ## Important Notice
 
-**MacApps is proprietary software.** The source code is not open for external contributions. All rights are reserved by Japo Tyrväinen.
+**MacApps is proprietary software.** The source code is not open for external contributions. All rights are reserved by J.I.Edelmann.
 
 ## How You Can Help
 
@@ -69,4 +69,4 @@ We appreciate your interest in MacApps and value your feedback in making the app
 
 ---
 
-Copyright © 2024 Japo Tyrväinen. All rights reserved.
+Copyright © 2025 J.I.Edelmann. All rights reserved.
