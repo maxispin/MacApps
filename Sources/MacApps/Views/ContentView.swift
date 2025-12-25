@@ -17,6 +17,10 @@ struct ContentView: View {
             BatchUpdateSheet()
                 .environmentObject(appState)
         }
+        .sheet(isPresented: $appState.showRegenerateAllSheet) {
+            RegenerateAllSheet()
+                .environmentObject(appState)
+        }
         .sheet(isPresented: $appState.showProgressSheet) {
             ProgressSheet()
                 .environmentObject(appState)

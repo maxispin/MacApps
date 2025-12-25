@@ -14,6 +14,7 @@ class AppState: ObservableObject {
     @Published var categoryFilter: CategoryFilter = .all
     @Published var functionFilter: String? = nil  // Filter by specific function
     @Published var showBatchUpdateSheet = false
+    @Published var showRegenerateAllSheet = false  // Regenerate all confirmation
     @Published var showProgressSheet = false  // Show progress for single app too
 
     // For real-time update display
@@ -606,6 +607,109 @@ class AppState: ObservableObject {
         updateStatus = .idle
         currentUpdateText = ""
         lastGeneratedDescription = ""
+    }
+
+    /// Regenerate ALL data for ALL apps (force refresh everything)
+    func regenerateAllApps() async {
+        shouldStopUpdate = false
+        let total = apps.count
+
+        if total == 0 {
+            updateStatus = .completed(updated: 0, skipped: 0, failed: 0)
+            return
+        }
+
+        var updated = 0
+        var failed = 0
+
+        for (index, app) in apps.enumerated() {
+            if shouldStopUpdate {
+                updateStatus = .completed(updated: updated, skipped: total - index, failed: failed)
+                currentUpdateText = ""
+                lastGeneratedDescription = ""
+                return
+            }
+
+            updateStatus = .updating(appName: app.name, current: index + 1, total: total)
+
+            guard let appIndex = apps.firstIndex(where: { $0.path == app.path }) else {
+                failed += 1
+                continue
+            }
+
+            // Clear existing data
+            apps[appIndex].descriptions = nil
+            apps[appIndex].categories = []
+            apps[appIndex].functions = []
+            apps[appIndex].pricing = .unknown
+
+            // Generate fresh descriptions
+            currentUpdateText = "[\(app.name)] Descriptions..."
+            let result = await generateMultiLanguageDescriptions(for: apps[appIndex])
+            apps[appIndex].descriptions = result.descriptions
+
+            if let finderComment = result.finderComment {
+                let success = writer.setFinderComment(path: app.path, comment: finderComment)
+                if success {
+                    apps[appIndex].finderComment = finderComment
+                    database.updateComment(for: app.path, comment: finderComment)
+                }
+                lastGeneratedDescription = finderComment
+                writer.indexForSpotlight(
+                    path: app.path,
+                    name: app.name,
+                    bundleIdentifier: app.bundleIdentifier,
+                    description: finderComment
+                )
+            }
+
+            // Generate category
+            currentUpdateText = "[\(app.name)] Category..."
+            let categoryResult = await Task.detached(priority: .userInitiated) { [claude] in
+                return claude.getCategoryWithTiming(for: app.name, bundleId: app.bundleIdentifier)
+            }.value
+
+            if let category = categoryResult.category {
+                apps[appIndex].categories = [category]
+                database.updateCategories(for: app.path, categories: [category])
+            }
+
+            // Generate functions
+            currentUpdateText = "[\(app.name)] Functions..."
+            let functionsResult = await Task.detached(priority: .userInitiated) { [claude] in
+                return claude.getFunctionsWithTiming(for: app.name, bundleId: app.bundleIdentifier, language: AppDatabase.systemLanguage)
+            }.value
+
+            if !functionsResult.functions.isEmpty {
+                apps[appIndex].functions = functionsResult.functions
+                database.updateFunctions(for: app.path, functions: functionsResult.functions)
+            }
+
+            // Generate pricing
+            currentUpdateText = "[\(app.name)] Pricing..."
+            let pricingResult = await Task.detached(priority: .userInitiated) { [claude] in
+                return claude.getPricingWithTiming(for: app.name, bundleId: app.bundleIdentifier)
+            }.value
+
+            if let pricing = pricingResult.pricing {
+                apps[appIndex].pricing = pricing
+                database.updatePricing(for: app.path, pricing: pricing)
+            }
+
+            updated += 1
+
+            // Update selected app if it's the one being processed
+            if selectedApp?.path == app.path {
+                selectedApp = apps[appIndex]
+            }
+
+            // Small delay between apps
+            try? await Task.sleep(nanoseconds: 300_000_000)
+        }
+
+        updateStatus = .completed(updated: updated, skipped: 0, failed: failed)
+        currentUpdateText = ""
+        database.save(apps: apps)
     }
 
     func clearCache() {

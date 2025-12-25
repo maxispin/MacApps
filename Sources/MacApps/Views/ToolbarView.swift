@@ -22,7 +22,15 @@ struct ToolbarView: ToolbarContent {
             }) {
                 Label("Update All", systemImage: "sparkles")
             }
-            .help("Generate AI descriptions and categories for all apps. Creates searchable Finder comments in your system language + English. Each app takes 2-5 seconds.")
+            .help("Generate AI descriptions and categories for apps missing data. Each app takes 2-5 seconds.")
+            .disabled(!appState.claudeAvailable || appState.scanStatus == .scanning || appState.isUpdating)
+
+            Button(action: {
+                appState.showRegenerateAllSheet = true
+            }) {
+                Label("Regenerate All", systemImage: "arrow.triangle.2.circlepath")
+            }
+            .help("Force regenerate ALL data for ALL apps (descriptions, categories, functions, pricing). Warning: This will take a long time!")
             .disabled(!appState.claudeAvailable || appState.scanStatus == .scanning || appState.isUpdating)
 
             Button(action: {
@@ -32,7 +40,7 @@ struct ToolbarView: ToolbarContent {
             }) {
                 Label("Categorize", systemImage: "tag")
             }
-            .help("Assign categories to all uncategorized apps. Also fetches descriptions for apps that don't have them. (\(appState.uncategorizedCount) uncategorized)")
+            .help("Assign categories to all uncategorized apps. (\(appState.uncategorizedCount) uncategorized)")
             .disabled(!appState.claudeAvailable || appState.scanStatus == .scanning || appState.isUpdating || appState.showProgressSheet || appState.uncategorizedCount == 0)
 
             Divider()
@@ -326,5 +334,106 @@ struct UpdateProgressView: View {
                 EmptyView()
             }
         }
+    }
+}
+
+struct RegenerateAllSheet: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(spacing: 8) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 36))
+                    .foregroundColor(.orange)
+                Text("Regenerate All Data")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                Text("This will regenerate ALL data for ALL \(appState.apps.count) apps: descriptions, categories, functions, and pricing.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            Divider()
+
+            if appState.isUpdating {
+                UpdateProgressView()
+                    .frame(maxHeight: .infinity)
+            } else if case .completed = appState.updateStatus {
+                UpdateProgressView()
+                    .frame(maxHeight: .infinity)
+            } else {
+                VStack(alignment: .leading, spacing: 16) {
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("Warning", systemImage: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                                .font(.headline)
+
+                            Text("This operation will:")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .padding(.top, 4)
+
+                            Text("• Delete all existing descriptions, categories, functions, and pricing")
+                            Text("• Generate fresh data for every app")
+                            Text("• Take approximately \(appState.apps.count * 10 / 60) minutes")
+                            Text("• Make ~\(appState.apps.count * 6) API calls to Claude")
+                        }
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+                }
+                .padding(24)
+            }
+
+            Divider()
+
+            // Buttons
+            HStack {
+                if appState.isUpdating {
+                    Button("Stop") {
+                        appState.stopBatchUpdate()
+                    }
+
+                    Spacer()
+
+                    Button("Hide") {
+                        appState.showRegenerateAllSheet = false
+                    }
+                } else if case .completed = appState.updateStatus {
+                    Spacer()
+                    Button("Close") {
+                        appState.showRegenerateAllSheet = false
+                        appState.resetUpdateStatus()
+                    }
+                    .keyboardShortcut(.defaultAction)
+                } else {
+                    Button("Cancel") {
+                        appState.showRegenerateAllSheet = false
+                    }
+                    .keyboardShortcut(.cancelAction)
+
+                    Spacer()
+
+                    Button("Regenerate All") {
+                        Task {
+                            await appState.regenerateAllApps()
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.orange)
+                }
+            }
+            .padding(16)
+        }
+        .frame(width: 500, height: 400)
     }
 }

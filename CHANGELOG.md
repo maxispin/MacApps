@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.2.1] - 2025-12-25
+## [0.4.3.0] - 2025-12-25
+
+### Added
+- **Regenerate All**: New toolbar button to force regenerate ALL data for ALL apps (descriptions, categories, functions, pricing)
 
 ### Changed
 - Functions now include both verb and noun forms for searchability (e.g., "muokkaa kuvia, kuvankäsittely")
