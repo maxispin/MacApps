@@ -143,33 +143,31 @@ class ClaudeService {
         prompt += """
         \(inLanguage).
 
-        Format: One action per line. Include BOTH verb forms: "verb + noun" format.
+        Format: One action per line. Short and simple: "verb + object" (2-3 words max).
         List 5-15 actions, most important first.
 
-        FORBIDDEN: No praise words like "popular", "powerful", "easily", "quickly". Only concrete actions!
+        FORBIDDEN: No praise words. No duplicate verb forms. Keep it simple!
 
         """
         if language == "fi" {
             prompt += """
-            Format: "verbi + substantiivi" - include both imperative and noun form
             Examples:
-            muokkaa muokkaaminen kuvia
-            rajaa rajaaminen valokuvia
-            säädä säätäminen värejä
-            poista poistaminen taustoja
-            lisää lisääminen suodattimia
+            muokkaa kuvia
+            rajaa valokuvia
+            säädä värejä
+            poista taustoja
+            lisää suodattimia
 
             Reply ONLY with the list in Finnish, one per line.
             """
         } else {
             prompt += """
-            Format: "verb + gerund + noun"
             Examples:
-            edit editing images
-            crop cropping photos
-            adjust adjusting colors
-            remove removing backgrounds
-            add adding filters
+            edit images
+            crop photos
+            adjust colors
+            remove backgrounds
+            add filters
 
             Reply ONLY with the list in English, one per line.
             """

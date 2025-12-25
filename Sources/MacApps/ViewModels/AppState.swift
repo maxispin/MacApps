@@ -12,6 +12,7 @@ class AppState: ObservableObject {
     @Published var filterOption: FilterOption = .all
     @Published var sourceFilter: SourceFilter = .all
     @Published var categoryFilter: CategoryFilter = .all
+    @Published var functionFilter: String? = nil  // Filter by specific function
     @Published var showBatchUpdateSheet = false
     @Published var showProgressSheet = false  // Show progress for single app too
 
@@ -101,6 +102,11 @@ class AppState: ObservableObject {
             result = result.filter { !$0.hasDescription }
         }
 
+        // Apply function filter
+        if let fn = functionFilter {
+            result = result.filter { $0.functions.contains { $0.lowercased() == fn.lowercased() } }
+        }
+
         if !searchText.isEmpty {
             let query = searchText.lowercased()
             result = result.filter { app in
@@ -148,6 +154,19 @@ class AppState: ObservableObject {
     /// Count of uncategorized apps
     var uncategorizedCount: Int {
         apps.filter { $0.categories.isEmpty }.count
+    }
+
+    /// All unique functions with counts, sorted by count
+    var functionCounts: [(function: String, count: Int)] {
+        var counts: [String: Int] = [:]
+        for app in apps {
+            for fn in app.functions {
+                let key = fn.lowercased()
+                counts[key, default: 0] += 1
+            }
+        }
+        return counts.map { (function: $0.key, count: $0.value) }
+            .sorted { $0.count > $1.count }
     }
 
     var claudeAvailable: Bool {
@@ -234,6 +253,75 @@ class AppState: ObservableObject {
                 database.updateComment(for: app.path, comment: comment)
             }
         }
+    }
+
+    /// Force regenerate all data for an app (clears existing first)
+    func regenerateApp(_ app: AppInfo) async {
+        showProgressSheet = true
+        currentUpdateText = "Regenerating \(app.name)..."
+        lastRequestDuration = 0
+
+        guard let index = apps.firstIndex(where: { $0.path == app.path }) else {
+            showProgressSheet = false
+            return
+        }
+
+        // Clear existing data
+        apps[index].descriptions = nil
+        apps[index].categories = []
+        apps[index].functions = []
+
+        // Generate fresh descriptions
+        currentUpdateText = "[\(app.name)] Descriptions..."
+        let result = await generateMultiLanguageDescriptions(for: apps[index])
+        apps[index].descriptions = result.descriptions
+
+        if let finderComment = result.finderComment {
+            let success = writer.setFinderComment(path: app.path, comment: finderComment)
+            if success {
+                apps[index].finderComment = finderComment
+                database.updateComment(for: app.path, comment: finderComment)
+            }
+            writer.indexForSpotlight(
+                path: app.path,
+                name: app.name,
+                bundleIdentifier: app.bundleIdentifier,
+                description: finderComment
+            )
+        }
+
+        // Generate fresh category
+        currentUpdateText = "[\(app.name)] Category..."
+        let categoryResult = await Task.detached(priority: .userInitiated) { [claude] in
+            return claude.getCategoryWithTiming(for: app.name, bundleId: app.bundleIdentifier)
+        }.value
+
+        if let category = categoryResult.category {
+            apps[index].categories = [category]
+            database.updateCategories(for: app.path, categories: [category])
+            currentUpdateText = "[\(app.name)] Category: \(category.rawValue) ✓"
+        }
+
+        // Generate fresh functions
+        currentUpdateText = "[\(app.name)] Functions..."
+        let functionsResult = await Task.detached(priority: .userInitiated) { [claude] in
+            return claude.getFunctionsWithTiming(for: app.name, bundleId: app.bundleIdentifier, language: AppDatabase.systemLanguage)
+        }.value
+
+        if !functionsResult.functions.isEmpty {
+            apps[index].functions = functionsResult.functions
+            database.updateFunctions(for: app.path, functions: functionsResult.functions)
+            currentUpdateText = "[\(app.name)] \(functionsResult.functions.count) functions ✓"
+        }
+
+        if selectedApp?.path == app.path {
+            selectedApp = apps[index]
+        }
+
+        currentUpdateText = "Done!"
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        showProgressSheet = false
+        currentUpdateText = ""
     }
 
     // Update single app with descriptions for all target languages

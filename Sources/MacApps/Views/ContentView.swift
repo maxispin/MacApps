@@ -196,6 +196,45 @@ struct SidebarView: View {
                 }
                 .menuStyle(.borderlessButton)
 
+                // Function filter menu
+                Menu {
+                    Button(action: { appState.functionFilter = nil }) {
+                        HStack {
+                            Text("All Functions")
+                            if appState.functionFilter == nil {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+
+                    if !appState.functionCounts.isEmpty {
+                        Divider()
+
+                        ForEach(appState.functionCounts.prefix(20), id: \.function) { item in
+                            Button(action: { appState.functionFilter = item.function }) {
+                                HStack {
+                                    Text("\(item.function) (\(item.count))")
+                                    if appState.functionFilter?.lowercased() == item.function.lowercased() {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "bolt.fill")
+                        Text(appState.functionFilter ?? "Functions")
+                        Image(systemName: "chevron.down")
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(appState.functionFilter != nil ? Color.purple.opacity(0.2) : Color(nsColor: .controlBackgroundColor))
+                    .cornerRadius(6)
+                }
+                .menuStyle(.borderlessButton)
+
                 Spacer()
             }
             .padding(.horizontal)

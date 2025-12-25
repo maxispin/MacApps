@@ -221,6 +221,25 @@ struct DescriptionSection: View {
                 .help("Use Claude AI to generate action-focused descriptions (what you can DO with this app) and assign a category. Creates short + expanded description in system language and English. Saves to Finder comment for Spotlight search.")
                 .disabled(isUpdating || !appState.claudeAvailable)
 
+                // Regenerate button for existing data
+                if app.hasDescription || !app.categories.isEmpty || !app.functions.isEmpty {
+                    Button(action: {
+                        Task {
+                            isUpdating = true
+                            await appState.regenerateApp(app)
+                            isUpdating = false
+                            showSuccess = true
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.clockwise")
+                            Text("Regenerate")
+                        }
+                    }
+                    .help("Force regenerate all data (descriptions, category, functions) even if they already exist.")
+                    .disabled(isUpdating || !appState.claudeAvailable)
+                }
+
                 Spacer()
 
                 if showSuccess {
@@ -263,6 +282,7 @@ struct DescriptionSection: View {
 
 struct AppInfoSection: View {
     let app: AppInfo
+    @EnvironmentObject var appState: AppState
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -334,13 +354,18 @@ struct AppInfoSection: View {
 
                 FlowLayout(spacing: 6) {
                     ForEach(app.functions, id: \.self) { fn in
-                        Text(fn)
-                            .font(.caption)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.accentColor.opacity(0.1))
-                            .foregroundColor(.accentColor)
-                            .cornerRadius(12)
+                        Button(action: {
+                            appState.functionFilter = fn
+                        }) {
+                            Text(fn)
+                                .font(.caption)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.green.opacity(0.15))
+                                .foregroundColor(.green)
+                                .cornerRadius(12)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }

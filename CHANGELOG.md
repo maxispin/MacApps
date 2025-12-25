@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1.0] - 2025-12-25
+
+### Added
+- **Functions filter**: Dropdown menu to filter apps by function (e.g., "edit images")
+- **Clickable function tags**: Click any function in app details to filter by it
+- **Regenerate button**: Force regenerate all data for an app (descriptions, category, functions)
+
+### Changed
+- Functions displayed in green color (was blue/purple)
+- Function prompts simplified - no more duplicate verb forms in function names
+
+### Fixed
+- Functions now stored and loaded correctly from database
+
 ## [0.4.0.0] - 2025-12-25
 
 ### Added
