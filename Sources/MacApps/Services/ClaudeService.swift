@@ -60,6 +60,12 @@ class ClaudeService {
         let durationMs: Int
     }
 
+    /// Result for functions
+    struct FunctionsResult {
+        let functions: [String]
+        let durationMs: Int
+    }
+
     func getDescription(for appName: String, bundleId: String?, type: DescriptionType, language: String = "en") -> String? {
         return getDescriptionWithTiming(for: appName, bundleId: bundleId, type: type, language: language).text
     }
@@ -118,6 +124,106 @@ class ClaudeService {
             let durationMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
             return CategoryResult(category: nil, durationMs: durationMs)
         }
+    }
+
+    /// Get functions/actions for an app
+    func getFunctionsWithTiming(for appName: String, bundleId: String?, language: String = "en") -> FunctionsResult {
+        guard let path = claudePath else { return FunctionsResult(functions: [], durationMs: 0) }
+
+        let startTime = CFAbsoluteTimeGetCurrent()
+
+        let escapedName = appName.replacingOccurrences(of: "'", with: "\\'")
+        let langName = languageName(for: language)
+        let inLanguage = language == "en" ? "" : " in \(langName)"
+
+        var prompt = "List the main ACTIONS/FUNCTIONS a user can do with the Mac application '\(escapedName)'"
+        if let bundleId = bundleId {
+            prompt += " (bundle id: \(bundleId))"
+        }
+        prompt += """
+        \(inLanguage).
+
+        Format: One action per line, starting with a verb. Keep each action 2-4 words.
+        List 5-15 actions, most important first.
+
+        """
+        if language == "fi" {
+            prompt += """
+            Examples:
+            muokkaa kuvia
+            rajaa valokuvia
+            säädä värejä
+            poista taustoja
+            lisää suodattimia
+
+            Reply ONLY with the list in Finnish, one per line.
+            """
+        } else {
+            prompt += """
+            Examples:
+            edit images
+            crop photos
+            adjust colors
+            remove backgrounds
+            add filters
+
+            Reply ONLY with the list in English, one per line.
+            """
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = ["-p", prompt]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let durationMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
+
+            if process.terminationStatus == 0 {
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                if let output = String(data: data, encoding: .utf8) {
+                    let functions = parseFunctions(from: output)
+                    return FunctionsResult(functions: functions, durationMs: durationMs)
+                }
+            }
+            return FunctionsResult(functions: [], durationMs: durationMs)
+        } catch {
+            let durationMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
+            return FunctionsResult(functions: [], durationMs: durationMs)
+        }
+    }
+
+    /// Parse functions from AI response (one per line)
+    private func parseFunctions(from text: String) -> [String] {
+        let lines = text.components(separatedBy: .newlines)
+        var functions: [String] = []
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            // Skip empty lines, numbered prefixes, bullets
+            var cleaned = trimmed
+            // Remove common prefixes: "1.", "- ", "• ", etc.
+            if let range = cleaned.range(of: #"^[\d\.\-\•\*]+\s*"#, options: .regularExpression) {
+                cleaned = String(cleaned[range.upperBound...])
+            }
+            cleaned = cleaned.trimmingCharacters(in: .whitespaces)
+
+            // Must start with lowercase letter (verb) and be 2-6 words
+            let words = cleaned.components(separatedBy: " ").filter { !$0.isEmpty }
+            if words.count >= 2 && words.count <= 6 && !cleaned.isEmpty {
+                // Normalize: lowercase first word (verb)
+                let normalized = cleaned.prefix(1).lowercased() + cleaned.dropFirst()
+                functions.append(normalized)
+            }
+        }
+
+        return functions
     }
 
     /// Parse category from AI response

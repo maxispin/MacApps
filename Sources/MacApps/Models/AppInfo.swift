@@ -78,6 +78,7 @@ struct AppInfo: Identifiable, Hashable {
     var isMenuBarApp: Bool = false  // LSUIElement = true
     var source: AppSource = .applications  // Where the app was found
     var categories: [AppCategory] = []  // AI-generated categories (usually 1, max 2-3)
+    var functions: [String] = []  // Action verbs: "edit images", "send messages", etc.
 
     // Multi-language descriptions stored in database
     var descriptions: [AppDatabase.LocalizedDescription]?
@@ -179,7 +180,8 @@ struct AppInfo: Identifiable, Hashable {
         lhs.path == rhs.path &&
         lhs.finderComment == rhs.finderComment &&
         lhs.descriptions == rhs.descriptions &&
-        lhs.categories == rhs.categories
+        lhs.categories == rhs.categories &&
+        lhs.functions == rhs.functions
     }
 }
 

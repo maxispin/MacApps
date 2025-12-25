@@ -111,7 +111,9 @@ class AppState: ObservableObject {
                 // Search in ALL language descriptions
                 app.allDescriptionsText.lowercased().contains(query) ||
                 // Search in any category
-                app.categories.contains { $0.rawValue.lowercased().contains(query) }
+                app.categories.contains { $0.rawValue.lowercased().contains(query) } ||
+                // Search in functions
+                app.functions.contains { $0.lowercased().contains(query) }
             }
         }
 
@@ -186,6 +188,7 @@ class AppState: ObservableObject {
                     isMenuBarApp: stored.isMenuBarApp ?? false,
                     source: stored.source ?? .applications,
                     categories: stored.categories ?? [],
+                    functions: stored.functions ?? [],
                     descriptions: stored.descriptions
                 )
             }.sorted { $0.name.lowercased() < $1.name.lowercased() }
@@ -283,6 +286,21 @@ class AppState: ObservableObject {
                     database.updateCategories(for: app.path, categories: [category])
                     currentUpdateText = "[\(app.name)] Kategoria: \(category.rawValue) ✓"
                     lastRequestDuration = categoryResult.durationMs
+                }
+            }
+
+            // Fetch functions if missing
+            if apps[index].functions.isEmpty {
+                currentUpdateText = "[\(app.name)] Toiminnot..."
+                let functionsResult = await Task.detached(priority: .userInitiated) { [claude] in
+                    return claude.getFunctionsWithTiming(for: app.name, bundleId: app.bundleIdentifier, language: AppDatabase.systemLanguage)
+                }.value
+
+                if !functionsResult.functions.isEmpty {
+                    apps[index].functions = functionsResult.functions
+                    database.updateFunctions(for: app.path, functions: functionsResult.functions)
+                    currentUpdateText = "[\(app.name)] \(functionsResult.functions.count) toimintoa ✓"
+                    lastRequestDuration = functionsResult.durationMs
                 }
             }
 
@@ -542,6 +560,21 @@ class AppState: ObservableObject {
                 lastGeneratedDescription = "\(app.name): \(category.rawValue)"
                 lastRequestDuration = categoryResult.durationMs
                 categorized += 1
+            }
+
+            // Fetch functions if missing
+            if apps[appIndex].functions.isEmpty {
+                currentUpdateText = "[\(app.name)] Functions... (\(index + 1)/\(total))"
+
+                let functionsResult = await Task.detached(priority: .userInitiated) { [claude] in
+                    return claude.getFunctionsWithTiming(for: app.name, bundleId: app.bundleIdentifier, language: AppDatabase.systemLanguage)
+                }.value
+
+                if !functionsResult.functions.isEmpty {
+                    apps[appIndex].functions = functionsResult.functions
+                    database.updateFunctions(for: app.path, functions: functionsResult.functions)
+                    lastRequestDuration = functionsResult.durationMs
+                }
             }
 
             // Update selected app if it's the one being processed

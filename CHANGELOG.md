@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0.0] - 2025-12-25
+
+### Added
+- **Functions/Actions**: New feature to list what you can DO with each app
+  - AI generates 5-15 action verbs per app (e.g., "edit images", "send messages")
+  - Displayed as tags in the app detail view with FlowLayout
+  - Searchable - find apps by what they can do
+  - Stored in database, fetched along with descriptions and categories
+
 ## [0.3.10.1] - 2025-12-25
 
 ### Fixed
@@ -367,6 +376,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.4.0.0 | 2025-12-25 | Functions/Actions - list what you can DO with each app |
 | 0.3.10.0 | 2025-12-25 | Multiple categories support, UI update fix |
 | 0.3.4.0 | 2025-12-25 | Large icons, Reindex progress, original comments preserved |
 | 0.3.3.0 | 2024-12-24 | CoreSpotlight integration for prefix-free search |

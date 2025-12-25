@@ -35,7 +35,7 @@ struct DetailView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(nsColor: .windowBackgroundColor))
-            .id("\(app.path)-\(app.categories.map { $0.rawValue }.joined())-\(app.descriptions?.count ?? 0)")  // Force refresh when app data changes
+            .id("\(app.path)-\(app.categories.map { $0.rawValue }.joined())-\(app.descriptions?.count ?? 0)-\(app.functions.count)")  // Force refresh when app data changes
         } else {
             ContentUnavailableView {
                 Label("Select an Application", systemImage: "app.dashed")
@@ -322,6 +322,72 @@ struct AppInfoSection: View {
                 }
             }
             .font(.system(.body, design: .monospaced))
+
+            // Functions (what you can DO with this app)
+            if !app.functions.isEmpty {
+                Divider()
+                    .padding(.vertical, 8)
+
+                Text("Functions")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                FlowLayout(spacing: 6) {
+                    ForEach(app.functions, id: \.self) { fn in
+                        Text(fn)
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.accentColor.opacity(0.1))
+                            .foregroundColor(.accentColor)
+                            .cornerRadius(12)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Flow layout for wrapping tags
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? .infinity
+        var height: CGFloat = 0
+        var rowWidth: CGFloat = 0
+        var rowHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if rowWidth + size.width > width && rowWidth > 0 {
+                height += rowHeight + spacing
+                rowWidth = size.width + spacing
+                rowHeight = size.height
+            } else {
+                rowWidth += size.width + spacing
+                rowHeight = max(rowHeight, size.height)
+            }
+        }
+        height += rowHeight
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX
+        var y = bounds.minY
+        var rowHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x + size.width > bounds.maxX && x > bounds.minX {
+                x = bounds.minX
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            subview.place(at: CGPoint(x: x, y: y), proposal: .unspecified)
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
         }
     }
 }

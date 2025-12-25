@@ -38,6 +38,7 @@ class AppDatabase {
         var isMenuBarApp: Bool?
         var source: AppSource?  // Where the app was found
         var categories: [AppCategory]?  // AI-generated categories (usually 1, max 2-3)
+        var functions: [String]?  // Action verbs: "edit images", "send messages", etc.
 
         // Multi-language descriptions
         var descriptions: [LocalizedDescription]?
@@ -103,8 +104,9 @@ class AppDatabase {
                 originalComment = app.finderComment
             }
 
-            // Preserve existing categories if not overwritten
+            // Preserve existing categories and functions if not overwritten
             let categories = app.categories.isEmpty ? existingApp?.categories : app.categories
+            let functions = app.functions.isEmpty ? existingApp?.functions : app.functions
 
             return StoredApp(
                 path: app.path,
@@ -116,6 +118,7 @@ class AppDatabase {
                 isMenuBarApp: app.isMenuBarApp,
                 source: app.source,
                 categories: categories,
+                functions: functions,
                 descriptions: app.descriptions ?? existingDescriptions
             )
         }
@@ -183,6 +186,33 @@ class AppDatabase {
                 stored[index].lastScanned = Date()
                 saveStored(stored)
             }
+        }
+    }
+
+    /// Update functions for an app
+    func updateFunctions(for path: String, functions: [String]) {
+        var stored = load()
+        if let index = stored.firstIndex(where: { $0.path == path }) {
+            stored[index].functions = functions
+            stored[index].lastScanned = Date()
+            saveStored(stored)
+        }
+    }
+
+    /// Add functions to an app (merges with existing, no duplicates)
+    func addFunctions(for path: String, newFunctions: [String]) {
+        var stored = load()
+        if let index = stored.firstIndex(where: { $0.path == path }) {
+            var functions = stored[index].functions ?? []
+            for fn in newFunctions {
+                let normalized = fn.lowercased().trimmingCharacters(in: .whitespaces)
+                if !functions.contains(where: { $0.lowercased() == normalized }) {
+                    functions.append(fn)
+                }
+            }
+            stored[index].functions = functions
+            stored[index].lastScanned = Date()
+            saveStored(stored)
         }
     }
 
