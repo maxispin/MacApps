@@ -146,6 +146,8 @@ class ClaudeService {
         Format: One action per line, starting with a verb. Keep each action 2-4 words.
         List 5-15 actions, most important first.
 
+        FORBIDDEN: No praise words! No adjectives like "popular", "powerful", "professional", "advanced", "easily", "quickly". Only concrete actions!
+
         """
         if language == "fi" {
             prompt += """
@@ -313,7 +315,13 @@ class ClaudeService {
             if let bundleId = bundleId {
                 prompt += " (bundle id: \(bundleId))"
             }
-            prompt += ". Focus on ACTION VERBS - what can user DO with this app. Reply ONLY with the description\(inLanguage), nothing else."
+            prompt += """
+            . Focus on ACTION VERBS - what can user DO with this app.
+
+            FORBIDDEN: No praise words, no adjectives like "popular", "powerful", "best", "great", "amazing", "professional", "advanced". Only actions!
+
+            Reply ONLY with the description\(inLanguage), nothing else.
+            """
             if language == "fi" {
                 prompt += " Example: 'Muokkaa kuvia, retusoi, rajaa, säädä värejä'"
             } else {
@@ -333,6 +341,8 @@ class ClaudeService {
 
             CRITICAL: Focus on ACTION VERBS - what can user DO with this app!
             The user knows what they want to DO, not the app name.
+
+            FORBIDDEN: No praise words! No adjectives like "popular", "powerful", "best", "great", "amazing", "professional", "advanced", "leading", "top", "excellent". These waste space and help no one find the app. Only actions!
 
             Include many verbs like:
             """

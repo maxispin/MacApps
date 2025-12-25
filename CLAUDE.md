@@ -224,6 +224,16 @@ The Claude CLI prompts are in `ClaudeService.swift`. When modifying:
 - Test with various app types
 - Generate both short and expanded versions
 
+**CRITICAL RULE - NO PRAISE WORDS:**
+Descriptions must NEVER contain praise or marketing language. Forbidden words include:
+- "popular", "powerful", "best", "great", "amazing", "professional"
+- "advanced", "leading", "top", "excellent", "premier", "ultimate"
+- "easily", "quickly", "seamlessly", "effortlessly"
+- Any adjective that praises the app rather than describing what it DOES
+
+These words waste precious character space and help NO ONE find the app.
+Only ACTION VERBS matter: edit, create, design, calculate, send, manage, etc.
+
 ### Debugging UI Updates
 If UI doesn't refresh after data change:
 - Check AppInfo.Equatable includes changed fields
