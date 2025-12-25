@@ -234,6 +234,13 @@ Descriptions must NEVER contain praise or marketing language. Forbidden words in
 These words waste precious character space and help NO ONE find the app.
 Only ACTION VERBS matter: edit, create, design, calculate, send, manage, etc.
 
+**CRITICAL RULE - INCLUDE BOTH VERB FORMS:**
+For searchability, descriptions must include BOTH verb forms:
+- English: "edit editing", "write writing", "create creating"
+- Finnish: "muokkaa muokkaaminen", "kirjoita kirjoittaminen", "tallenna tallentaminen"
+
+This ensures users find the app whether they search "edit" or "editing", "muokkaa" or "muokkaaminen".
+
 ### Debugging UI Updates
 If UI doesn't refresh after data change:
 - Check AppInfo.Equatable includes changed fields

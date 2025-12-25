@@ -143,31 +143,33 @@ class ClaudeService {
         prompt += """
         \(inLanguage).
 
-        Format: One action per line, starting with a verb. Keep each action 2-4 words.
+        Format: One action per line. Include BOTH verb forms: "verb + noun" format.
         List 5-15 actions, most important first.
 
-        FORBIDDEN: No praise words! No adjectives like "popular", "powerful", "professional", "advanced", "easily", "quickly". Only concrete actions!
+        FORBIDDEN: No praise words like "popular", "powerful", "easily", "quickly". Only concrete actions!
 
         """
         if language == "fi" {
             prompt += """
+            Format: "verbi + substantiivi" - include both imperative and noun form
             Examples:
-            muokkaa kuvia
-            rajaa valokuvia
-            säädä värejä
-            poista taustoja
-            lisää suodattimia
+            muokkaa muokkaaminen kuvia
+            rajaa rajaaminen valokuvia
+            säädä säätäminen värejä
+            poista poistaminen taustoja
+            lisää lisääminen suodattimia
 
             Reply ONLY with the list in Finnish, one per line.
             """
         } else {
             prompt += """
+            Format: "verb + gerund + noun"
             Examples:
-            edit images
-            crop photos
-            adjust colors
-            remove backgrounds
-            add filters
+            edit editing images
+            crop cropping photos
+            adjust adjusting colors
+            remove removing backgrounds
+            add adding filters
 
             Reply ONLY with the list in English, one per line.
             """
@@ -318,14 +320,18 @@ class ClaudeService {
             prompt += """
             . Focus on ACTION VERBS - what can user DO with this app.
 
-            FORBIDDEN: No praise words, no adjectives like "popular", "powerful", "best", "great", "amazing", "professional", "advanced". Only actions!
+            IMPORTANT: Include BOTH verb forms for searchability:
+            - English: "edit editing, write writing, create creating"
+            - Finnish: "muokkaa muokkaaminen, kirjoita kirjoittaminen"
+
+            FORBIDDEN: No praise words like "popular", "powerful", "best", "amazing", "professional".
 
             Reply ONLY with the description\(inLanguage), nothing else.
             """
             if language == "fi" {
-                prompt += " Example: 'Muokkaa kuvia, retusoi, rajaa, säädä värejä'"
+                prompt += " Example: 'Muokkaa muokkaaminen kuvia, retusoi retusoiminen, rajaa rajaaminen'"
             } else {
-                prompt += " Example: 'Edit photos, retouch, crop, adjust colors'"
+                prompt += " Example: 'Edit editing photos, retouch retouching, crop cropping'"
             }
             return prompt
 
@@ -342,33 +348,34 @@ class ClaudeService {
             CRITICAL: Focus on ACTION VERBS - what can user DO with this app!
             The user knows what they want to DO, not the app name.
 
-            FORBIDDEN: No praise words! No adjectives like "popular", "powerful", "best", "great", "amazing", "professional", "advanced", "leading", "top", "excellent". These waste space and help no one find the app. Only actions!
+            IMPORTANT: Include BOTH verb forms for searchability:
+            - English: "edit editing, write writing, create creating"
+            - Finnish: "muokkaa muokkaaminen, kirjoita kirjoittaminen, tallenna tallentaminen"
 
-            Include many verbs like:
+            FORBIDDEN: No praise words! No "popular", "powerful", "best", "amazing", "professional", "advanced". Only actions!
+
+            Include verbs like:
             """
             if language == "fi" {
                 prompt += """
 
-                - kirjoita, muokkaa, luo, suunnittele, piirrä, luonnostele
-                - laske, analysoi, taulukoi, kaavio, graafi
-                - tallenna, jaa, lähetä, synkronoi, varmuuskopioi
-                - etsi, selaa, järjestä, hallitse, organisoi
-                - toista, nauhoita, miksaa, editoi, leikkaa
+                - kirjoita kirjoittaminen, muokkaa muokkaaminen, luo luominen
+                - laske laskeminen, analysoi analysointi, suunnittele suunnittelu
+                - tallenna tallentaminen, jaa jakaminen, lähetä lähettäminen
+                - etsi etsiminen, selaa selaaminen, järjestä järjestäminen
 
                 Reply ONLY with the description in Finnish. Use ALL 255 characters.
-                Example: 'Muokkaa kuvia, retusoi valokuvia, rajaa, säädä värejä, lisää suodattimia, poista taustoja, yhdistä tasoja, luo kollaaseja, piirrä, maalaa digitaalista taidetta, suunnittele grafiikoita, vie eri formaatteihin'
+                Example: 'Muokkaa muokkaaminen kuvia, retusoi retusoiminen valokuvia, rajaa rajaaminen, säädä säätäminen värejä, lisää lisääminen suodattimia, poista poistaminen taustoja'
                 """
             } else {
                 prompt += """
 
-                - write, edit, create, design, draw, sketch
-                - calculate, analyze, spreadsheet, chart, graph
-                - save, share, send, sync, backup
-                - search, browse, organize, manage, sort
-                - play, record, mix, edit, cut
+                - write writing, edit editing, create creating, design designing
+                - calculate calculating, analyze analyzing, save saving, share sharing
+                - search searching, browse browsing, organize organizing, manage managing
 
                 Reply ONLY with the description in English. Use ALL 255 characters.
-                Example: 'Edit photos, retouch images, crop, adjust colors, add filters, remove backgrounds, merge layers, create collages, draw, paint digital art, design graphics, export to various formats, batch process'
+                Example: 'Edit editing photos, retouch retouching images, crop cropping, adjust adjusting colors, add adding filters, remove removing backgrounds, merge merging layers, create creating collages'
                 """
             }
             return prompt
