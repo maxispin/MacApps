@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.9.0] - 2025-12-25
+
+### Changed
+- **Categorize button now also fetches descriptions**: If an app has no description, it fetches descriptions first, then category. Apps with existing descriptions only get category.
+
 ## [0.3.8.0] - 2025-12-25
 
 ### Added

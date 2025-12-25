@@ -32,7 +32,7 @@ struct ToolbarView: ToolbarContent {
             }) {
                 Label("Categorize", systemImage: "tag")
             }
-            .help("Assign categories to all uncategorized apps without generating descriptions. Faster than Update All - only fetches category. (\(appState.uncategorizedCount) uncategorized)")
+            .help("Assign categories to all uncategorized apps. Also fetches descriptions for apps that don't have them. (\(appState.uncategorizedCount) uncategorized)")
             .disabled(!appState.claudeAvailable || appState.scanStatus == .scanning || appState.isUpdating || appState.showProgressSheet || appState.uncategorizedCount == 0)
 
             Divider()

@@ -478,7 +478,8 @@ class AppState: ObservableObject {
         writer.clearSpotlightIndex()
     }
 
-    /// Categorize all uncategorized apps (without fetching descriptions)
+    /// Categorize all uncategorized apps
+    /// If app has no description, fetches description too
     func categorizeAllApps() async {
         let uncategorized = apps.filter { $0.category == nil }
         let total = uncategorized.count
@@ -494,33 +495,74 @@ class AppState: ObservableObject {
 
         showProgressSheet = true
         var categorized = 0
+        var described = 0
 
         for (index, app) in uncategorized.enumerated() {
-            currentUpdateText = "Categorizing \(app.name)... (\(index + 1)/\(total))"
+            guard let appIndex = apps.firstIndex(where: { $0.path == app.path }) else { continue }
+
+            // If app has no description, fetch descriptions first
+            if !app.hasAllLanguages {
+                currentUpdateText = "[\(app.name)] Fetching descriptions... (\(index + 1)/\(total))"
+
+                let result = await generateMultiLanguageDescriptions(for: app)
+
+                // Update descriptions in memory
+                apps[appIndex].descriptions = result.descriptions
+
+                // Write primary description to Finder comment
+                if let finderComment = result.finderComment {
+                    let success = writer.setFinderComment(path: app.path, comment: finderComment)
+                    if success {
+                        apps[appIndex].finderComment = finderComment
+                        database.updateComment(for: app.path, comment: finderComment)
+                        described += 1
+                    }
+                    lastGeneratedDescription = finderComment
+
+                    // Index for Spotlight
+                    writer.indexForSpotlight(
+                        path: app.path,
+                        name: app.name,
+                        bundleIdentifier: app.bundleIdentifier,
+                        description: finderComment
+                    )
+                }
+            }
+
+            // Fetch category
+            currentUpdateText = "[\(app.name)] Categorizing... (\(index + 1)/\(total))"
 
             let categoryResult = await Task.detached(priority: .userInitiated) { [claude] in
                 return claude.getCategoryWithTiming(for: app.name, bundleId: app.bundleIdentifier)
             }.value
 
             if let category = categoryResult.category {
-                if let appIndex = apps.firstIndex(where: { $0.path == app.path }) {
-                    apps[appIndex].category = category
-                    database.updateCategory(for: app.path, category: category)
-                    lastGeneratedDescription = "\(app.name): \(category.rawValue)"
-                    lastRequestDuration = categoryResult.durationMs
-                    categorized += 1
-                }
+                apps[appIndex].category = category
+                database.updateCategory(for: app.path, category: category)
+                lastGeneratedDescription = "\(app.name): \(category.rawValue)"
+                lastRequestDuration = categoryResult.durationMs
+                categorized += 1
+            }
+
+            // Update selected app if it's the one being processed
+            if selectedApp?.path == app.path {
+                selectedApp = apps[appIndex]
             }
 
             // Small delay between API calls
             try? await Task.sleep(nanoseconds: 200_000_000)
         }
 
-        currentUpdateText = "Done! Categorized \(categorized) apps."
+        if described > 0 {
+            currentUpdateText = "Done! Categorized \(categorized), described \(described) apps."
+        } else {
+            currentUpdateText = "Done! Categorized \(categorized) apps."
+        }
         try? await Task.sleep(nanoseconds: 1_500_000_000)
         showProgressSheet = false
         currentUpdateText = ""
         lastGeneratedDescription = ""
+        database.save(apps: apps)
     }
 
     /// Reindex all apps with descriptions to Spotlight
