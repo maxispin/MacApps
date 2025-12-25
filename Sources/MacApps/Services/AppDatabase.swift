@@ -37,6 +37,7 @@ class AppDatabase {
         var lastScanned: Date
         var isMenuBarApp: Bool?
         var source: AppSource?  // Where the app was found
+        var category: AppCategory?  // AI-generated category
 
         // Multi-language descriptions
         var descriptions: [LocalizedDescription]?
@@ -102,6 +103,9 @@ class AppDatabase {
                 originalComment = app.finderComment
             }
 
+            // Preserve existing category if not overwritten
+            let category = app.category ?? existingApp?.category
+
             return StoredApp(
                 path: app.path,
                 name: app.name,
@@ -111,6 +115,7 @@ class AppDatabase {
                 lastScanned: Date(),
                 isMenuBarApp: app.isMenuBarApp,
                 source: app.source,
+                category: category,
                 descriptions: app.descriptions ?? existingDescriptions
             )
         }
@@ -153,6 +158,16 @@ class AppDatabase {
             stored[index].finderComment = comment
             stored[index].lastScanned = Date()
 
+            saveStored(stored)
+        }
+    }
+
+    /// Update category for an app
+    func updateCategory(for path: String, category: AppCategory) {
+        var stored = load()
+        if let index = stored.firstIndex(where: { $0.path == path }) {
+            stored[index].category = category
+            stored[index].lastScanned = Date()
             saveStored(stored)
         }
     }

@@ -1,6 +1,53 @@
 import Foundation
 import SwiftUI
 
+/// Application category based on functionality
+enum AppCategory: String, Codable, CaseIterable {
+    case productivity = "Productivity"
+    case development = "Development"
+    case design = "Design"
+    case media = "Media"
+    case communication = "Communication"
+    case utilities = "Utilities"
+    case games = "Games"
+    case finance = "Finance"
+    case education = "Education"
+    case system = "System"
+    case other = "Other"
+
+    var icon: String {
+        switch self {
+        case .productivity: return "doc.text.fill"
+        case .development: return "chevron.left.forwardslash.chevron.right"
+        case .design: return "paintbrush.fill"
+        case .media: return "play.circle.fill"
+        case .communication: return "bubble.left.and.bubble.right.fill"
+        case .utilities: return "wrench.and.screwdriver.fill"
+        case .games: return "gamecontroller.fill"
+        case .finance: return "dollarsign.circle.fill"
+        case .education: return "graduationcap.fill"
+        case .system: return "gearshape.fill"
+        case .other: return "square.grid.2x2.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .productivity: return .blue
+        case .development: return .orange
+        case .design: return .purple
+        case .media: return .red
+        case .communication: return .green
+        case .utilities: return .gray
+        case .games: return .pink
+        case .finance: return .mint
+        case .education: return .indigo
+        case .system: return .secondary
+        case .other: return .secondary
+        }
+    }
+}
+
 /// Source location where an application was found
 enum AppSource: String, Codable, CaseIterable {
     case applications = "Applications"          // /Applications
@@ -30,6 +77,7 @@ struct AppInfo: Identifiable, Hashable {
     var icon: NSImage?
     var isMenuBarApp: Bool = false  // LSUIElement = true
     var source: AppSource = .applications  // Where the app was found
+    var category: AppCategory?  // AI-generated category
 
     // Multi-language descriptions stored in database
     var descriptions: [AppDatabase.LocalizedDescription]?

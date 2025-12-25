@@ -3,7 +3,7 @@
 [![Swift](https://img.shields.io/badge/Swift-5.9+-orange.svg)](https://swift.org)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2014+-blue.svg)](https://www.apple.com/macos)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.3.5.0-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-0.3.8.0-brightgreen.svg)](CHANGELOG.md)
 
 ## The Problem
 
@@ -35,17 +35,28 @@ Or use the `comment:` prefix for exact matches:
 
 ## Features
 
-- **Action-Based Descriptions**: Focus on verbs - what you can DO with each app
-- **Multi-Language Support**: Descriptions in your system language + English
-- **Visual Application Browser**: Browse all installed apps with icons (128x128 in detail view)
-- **Smart Search**: Search by actions across ALL languages
-- **AI-Powered**: Uses Claude AI to generate intelligent, searchable descriptions
-- **Finder Integration**: Descriptions saved as Finder comments (255 chars)
-- **Spotlight Indexing**: CoreSpotlight integration for prefix-free search (App Store version)
-- **Menu Bar App Support**: Detect and launch menu bar apps
-- **Batch Processing**: Update all apps at once with progress tracking
-- **Persistent Cache**: Fast startup with local database
+### Core Features
+- **Action-Based Descriptions**: AI generates verb-focused descriptions - what you can DO with each app (e.g., "Edit photos, retouch, crop, adjust colors...")
+- **App Categories**: Automatic categorization (Productivity, Development, Design, Media, Communication, Utilities, Games, Finance, Education, System)
+- **Multi-Language Support**: Descriptions generated in your system language + English for maximum searchability
+- **Finder Integration**: Descriptions saved as Finder comments (255 chars max) - searchable in Spotlight
+
+### App Discovery
+- **Multi-Location Scanning**: Scans /Applications, ~/Applications, /System/Applications, Homebrew Caskroom, and Setapp
+- **Source Filtering**: Filter by source (All, Hide Setapp, Only Setapp)
+- **Category Filtering**: Filter by category with dropdown menu
+- **Smart Search**: Search by app name, bundle ID, description, or category
+
+### User Interface
+- **Visual Browser**: Browse all installed apps with 128x128 icons in detail view
+- **Real-Time Progress**: See description generation progress with timing info
+- **Menu Bar App Support**: Detect menu bar apps, launch them, open their preferences
+- **Context Menu**: Right-click for quick actions (Open in Finder, Launch, Generate Description)
+
+### Data Management
+- **Persistent Cache**: Fast startup with local JSON database
 - **Original Comments Preserved**: Stores original Finder comments before modification
+- **Spotlight Indexing**: CoreSpotlight integration for prefix-free search (requires signed app)
 
 ## Screenshots
 
@@ -81,47 +92,80 @@ swift run
 
 ### Basic Workflow
 
-1. **Launch MacApps** - The app automatically scans your `/Applications` folder
-2. **Browse or Search** - Use the sidebar to find apps, or search by name/description
-3. **Select an App** - Click to view details with large icon
-4. **Generate Description** - Click "Generate Description" to create AI descriptions
-5. **Search in Spotlight** - Type `keyword app` (e.g., `calculate app`) to find apps
+1. **Launch MacApps** - The app automatically scans all application folders
+2. **Browse or Search** - Use the sidebar to find apps by name, description, or category
+3. **Select an App** - Click to view details with large icon (128x128)
+4. **Generate Description** - Click "Generate Description" to create AI descriptions and category
+5. **Search in Spotlight** - Type `keyword app` (e.g., `calculate app`) to find apps by what they do
+
+### Toolbar Buttons
+
+| Button | Description |
+|--------|-------------|
+| **Scan** | Rescan all application folders (/Applications, ~/Applications, /System/Applications, Homebrew, Setapp). Use after installing or removing apps. |
+| **Update All** | Generate AI descriptions and categories for multiple apps. Shows options dialog with progress tracking. |
+| **Reindex Spotlight** | Re-add all descriptions to CoreSpotlight index for prefix-free search. Only works with signed app. |
+
+### Filters
+
+- **Description Filter**: Show All / With Description / Without Description
+- **Source Filter**: All Sources / Hide Setapp / Only Setapp
+- **Category Filter**: Dropdown menu with all categories (shows count per category)
+
+### Generate Description Button
+
+When you click "Generate Description" for an app, MacApps:
+1. Generates a short description (5-10 words) in your system language
+2. Generates an expanded description (255 chars) in your system language
+3. Generates both in English (if system is not English)
+4. Assigns a category (Development, Design, Media, etc.)
+5. Saves the description as a Finder comment
+6. Indexes for Spotlight search
+
+Each API call takes 2-5 seconds. Progress is shown in real-time.
 
 ### Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
 | Cmd+R | Rescan applications |
+| Double-click | Launch app |
 
 ### Context Menu
 
 Right-click any app in the list for quick actions:
-- Open in Finder
-- Launch App
-- Open Preferences (for menu bar apps)
-- Generate Description
+- **Open in Finder** - Reveal the app in Finder
+- **Launch App** - Open the application
+- **Open Preferences** - For menu bar apps, open settings (Cmd+,)
+- **Generate Description** - Create AI description and category
 
-### Batch Update
+### Categories
 
-Use the "Update All" toolbar button to:
-- Update all apps at once
-- Update only apps with missing descriptions
-- View real-time progress with timing info
-
-### Reindex Spotlight
-
-Use the "Reindex Spotlight" toolbar button to:
-- Index all existing descriptions for Spotlight
-- Shows progress during indexing
-- Note: Requires signed app for prefix-free search
+Apps are automatically categorized into:
+- **Productivity** - Office, notes, documents
+- **Development** - IDEs, coding, databases
+- **Design** - Graphics, video, UI design
+- **Media** - Music, video, photos, streaming
+- **Communication** - Email, chat, video calls
+- **Utilities** - System tools, file managers
+- **Games** - Games, entertainment
+- **Finance** - Accounting, trading, banking
+- **Education** - Learning, courses, reference
+- **System** - OS components, settings
 
 ## How It Works
 
-1. **Scan**: Reads all `.app` bundles from `/Applications` with icons
-2. **Display**: Shows apps in a searchable, filterable list
-3. **Generate**: Sends app info to Claude CLI for AI description
-4. **Write**: Saves description to Finder comment + CoreSpotlight index
+1. **Scan**: Reads all `.app` bundles from multiple locations (Applications, System, Homebrew, Setapp)
+2. **Display**: Shows apps in a searchable, filterable list with icons and metadata
+3. **Generate**: Sends app name + bundle ID to Claude CLI, receives action-focused description + category
+4. **Write**: Saves description to Finder comment (255 chars) + CoreSpotlight index
 5. **Search**: Type `keyword app` in Spotlight to find apps by what they do
+
+### Data Storage
+
+- **Database**: `~/Library/Application Support/MacApps/apps.json`
+- **Finder Comments**: Written via AppleScript to each app's metadata
+- **Spotlight Index**: CoreSpotlight entries (requires signed app for prefix-free search)
 
 ## Security & Privacy
 

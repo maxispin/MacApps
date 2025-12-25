@@ -12,7 +12,7 @@ struct ToolbarView: ToolbarContent {
             }) {
                 Label("Scan", systemImage: "arrow.clockwise")
             }
-            .help("Rescan applications (Cmd+R)")
+            .help("Rescan all application folders (/Applications, ~/Applications, /System/Applications, Homebrew, Setapp) and update the app list. Use after installing or removing apps. (Cmd+R)")
             .disabled(appState.scanStatus == .scanning || appState.isUpdating)
 
             Divider()
@@ -22,8 +22,18 @@ struct ToolbarView: ToolbarContent {
             }) {
                 Label("Update All", systemImage: "sparkles")
             }
-            .help("Generate descriptions for all apps")
+            .help("Generate AI descriptions and categories for all apps. Creates searchable Finder comments in your system language + English. Each app takes 2-5 seconds.")
             .disabled(!appState.claudeAvailable || appState.scanStatus == .scanning || appState.isUpdating)
+
+            Button(action: {
+                Task {
+                    await appState.categorizeAllApps()
+                }
+            }) {
+                Label("Categorize", systemImage: "tag")
+            }
+            .help("Assign categories to all uncategorized apps without generating descriptions. Faster than Update All - only fetches category. (\(appState.uncategorizedCount) uncategorized)")
+            .disabled(!appState.claudeAvailable || appState.scanStatus == .scanning || appState.isUpdating || appState.showProgressSheet || appState.uncategorizedCount == 0)
 
             Divider()
 
@@ -34,7 +44,7 @@ struct ToolbarView: ToolbarContent {
             }) {
                 Label("Reindex Spotlight", systemImage: "magnifyingglass")
             }
-            .help("Reindex all descriptions for Spotlight search")
+            .help("Re-add all descriptions to CoreSpotlight index. Required for prefix-free Spotlight search. Note: Only works with signed/notarized app (App Store version).")
             .disabled(appState.scanStatus == .scanning || appState.isUpdating || appState.showProgressSheet)
         }
 
@@ -97,9 +107,11 @@ struct BatchUpdateSheet: View {
                 Text("Update All Descriptions")
                     .font(.title2)
                     .fontWeight(.semibold)
-                Text("Generates both short and detailed descriptions for better searchability")
+                Text("Uses Claude AI to generate action-focused descriptions and categories for each app. Descriptions are saved as Finder comments (255 chars) in your system language + English.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
             }
             .padding(.top, 20)
             .padding(.bottom, 16)
@@ -121,6 +133,7 @@ struct BatchUpdateSheet: View {
                         .font(.headline)
 
                     Toggle("Only apps without description", isOn: $onlyMissing)
+                        .help("When enabled, skips apps that already have descriptions in all target languages")
 
                     HStack {
                         Image(systemName: "info.circle")
@@ -128,6 +141,21 @@ struct BatchUpdateSheet: View {
                         Text("\(appsToProcess) apps will be processed")
                     }
                     .font(.callout)
+
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("What happens:")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                            Text("• Short description (5-10 words) in system language")
+                            Text("• Expanded description (255 chars) in system language")
+                            Text("• Same in English (if system is not English)")
+                            Text("• Category assignment (Development, Design, etc.)")
+                            Text("• Finder comment updated for Spotlight search")
+                        }
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    }
 
                     Spacer()
                 }

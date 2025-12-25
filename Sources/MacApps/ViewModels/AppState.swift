@@ -11,6 +11,7 @@ class AppState: ObservableObject {
     @Published var selectedDescriptionType: DescriptionType = .expanded
     @Published var filterOption: FilterOption = .all
     @Published var sourceFilter: SourceFilter = .all
+    @Published var categoryFilter: CategoryFilter = .all
     @Published var showBatchUpdateSheet = false
     @Published var showProgressSheet = false  // Show progress for single app too
 
@@ -51,6 +52,20 @@ class AppState: ObservableObject {
         }
     }
 
+    enum CategoryFilter: Hashable {
+        case all
+        case category(AppCategory)
+        case uncategorized
+
+        var displayName: String {
+            switch self {
+            case .all: return "All Categories"
+            case .category(let c): return c.rawValue
+            case .uncategorized: return "Uncategorized"
+            }
+        }
+    }
+
     var filteredApps: [AppInfo] {
         var result = apps
 
@@ -64,6 +79,16 @@ class AppState: ObservableObject {
             result = result.filter { $0.source == .setapp }
         case .source(let source):
             result = result.filter { $0.source == source }
+        }
+
+        // Apply category filter
+        switch categoryFilter {
+        case .all:
+            break
+        case .category(let category):
+            result = result.filter { $0.category == category }
+        case .uncategorized:
+            result = result.filter { $0.category == nil }
         }
 
         // Apply description filter
@@ -84,7 +109,9 @@ class AppState: ObservableObject {
                 // Search in bundle ID
                 (app.bundleIdentifier?.lowercased().contains(query) ?? false) ||
                 // Search in ALL language descriptions
-                app.allDescriptionsText.lowercased().contains(query)
+                app.allDescriptionsText.lowercased().contains(query) ||
+                // Search in category
+                (app.category?.rawValue.lowercased().contains(query) ?? false)
             }
         }
 
@@ -98,6 +125,27 @@ class AppState: ObservableObject {
             counts[source] = apps.filter { $0.source == source }.count
         }
         return counts
+    }
+
+    /// Get count of apps per category
+    var categoryCounts: [AppCategory: Int] {
+        var counts: [AppCategory: Int] = [:]
+        for category in AppCategory.allCases {
+            counts[category] = apps.filter { $0.category == category }.count
+        }
+        return counts
+    }
+
+    /// Categories that have apps
+    var availableCategories: [AppCategory] {
+        AppCategory.allCases.filter { category in
+            apps.contains { $0.category == category }
+        }
+    }
+
+    /// Count of uncategorized apps
+    var uncategorizedCount: Int {
+        apps.filter { $0.category == nil }.count
     }
 
     var claudeAvailable: Bool {
@@ -137,6 +185,7 @@ class AppState: ObservableObject {
                     icon: nil,
                     isMenuBarApp: stored.isMenuBarApp ?? false,
                     source: stored.source ?? .applications,
+                    category: stored.category,
                     descriptions: stored.descriptions
                 )
             }.sorted { $0.name.lowercased() < $1.name.lowercased() }
@@ -220,6 +269,21 @@ class AppState: ObservableObject {
                     bundleIdentifier: app.bundleIdentifier,
                     description: finderComment
                 )
+            }
+
+            // Fetch category if missing
+            if apps[index].category == nil {
+                currentUpdateText = "[\(app.name)] Kategoria..."
+                let categoryResult = await Task.detached(priority: .userInitiated) { [claude] in
+                    return claude.getCategoryWithTiming(for: app.name, bundleId: app.bundleIdentifier)
+                }.value
+
+                if let category = categoryResult.category {
+                    apps[index].category = category
+                    database.updateCategory(for: app.path, category: category)
+                    currentUpdateText = "[\(app.name)] Kategoria: \(category.rawValue) ✓"
+                    lastRequestDuration = categoryResult.durationMs
+                }
             }
 
             if selectedApp?.path == app.path {
@@ -412,6 +476,51 @@ class AppState: ObservableObject {
     func clearCache() {
         database.clear()
         writer.clearSpotlightIndex()
+    }
+
+    /// Categorize all uncategorized apps (without fetching descriptions)
+    func categorizeAllApps() async {
+        let uncategorized = apps.filter { $0.category == nil }
+        let total = uncategorized.count
+
+        if total == 0 {
+            currentUpdateText = "All apps already categorized!"
+            showProgressSheet = true
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            showProgressSheet = false
+            currentUpdateText = ""
+            return
+        }
+
+        showProgressSheet = true
+        var categorized = 0
+
+        for (index, app) in uncategorized.enumerated() {
+            currentUpdateText = "Categorizing \(app.name)... (\(index + 1)/\(total))"
+
+            let categoryResult = await Task.detached(priority: .userInitiated) { [claude] in
+                return claude.getCategoryWithTiming(for: app.name, bundleId: app.bundleIdentifier)
+            }.value
+
+            if let category = categoryResult.category {
+                if let appIndex = apps.firstIndex(where: { $0.path == app.path }) {
+                    apps[appIndex].category = category
+                    database.updateCategory(for: app.path, category: category)
+                    lastGeneratedDescription = "\(app.name): \(category.rawValue)"
+                    lastRequestDuration = categoryResult.durationMs
+                    categorized += 1
+                }
+            }
+
+            // Small delay between API calls
+            try? await Task.sleep(nanoseconds: 200_000_000)
+        }
+
+        currentUpdateText = "Done! Categorized \(categorized) apps."
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        showProgressSheet = false
+        currentUpdateText = ""
+        lastGeneratedDescription = ""
     }
 
     /// Reindex all apps with descriptions to Spotlight

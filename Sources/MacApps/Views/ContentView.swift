@@ -29,35 +29,175 @@ struct ContentView: View {
 struct SidebarView: View {
     @EnvironmentObject var appState: AppState
 
+    private var categoryIcon: String {
+        switch appState.categoryFilter {
+        case .all:
+            return "square.grid.2x2"
+        case .category(let c):
+            return c.icon
+        case .uncategorized:
+            return "questionmark.square"
+        }
+    }
+
+    private var descriptionIcon: String {
+        switch appState.filterOption {
+        case .all: return "square.grid.2x2"
+        case .withDescription: return "checkmark.circle.fill"
+        case .withoutDescription: return "circle"
+        }
+    }
+
+    private var sourceIcon: String {
+        switch appState.sourceFilter {
+        case .all: return "folder"
+        case .hideSetapp: return "eye.slash"
+        case .onlySetapp: return "s.square.fill"
+        case .source(let s): return s.icon
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Search bar
             SearchBar(text: $appState.searchText)
                 .padding()
 
-            // Description filter picker
-            Picker(selection: $appState.filterOption) {
-                ForEach(AppState.FilterOption.allCases, id: \.self) { option in
-                    Text(option.rawValue).tag(option)
+            // Filter row with three dropdown menus
+            HStack(spacing: 8) {
+                // Description filter menu
+                Menu {
+                    ForEach(AppState.FilterOption.allCases, id: \.self) { option in
+                        Button(action: { appState.filterOption = option }) {
+                            HStack {
+                                switch option {
+                                case .all:
+                                    Image(systemName: "square.grid.2x2")
+                                case .withDescription:
+                                    Image(systemName: "checkmark.circle.fill")
+                                case .withoutDescription:
+                                    Image(systemName: "circle")
+                                }
+                                Text(option.rawValue)
+                                if appState.filterOption == option {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: descriptionIcon)
+                        Text(appState.filterOption.rawValue)
+                        Image(systemName: "chevron.down")
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(nsColor: .controlBackgroundColor))
+                    .cornerRadius(6)
                 }
-            } label: {
-                EmptyView()
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .padding(.horizontal)
-            .padding(.bottom, 4)
+                .menuStyle(.borderlessButton)
 
-            // Source filter picker
-            Picker(selection: $appState.sourceFilter) {
-                ForEach(AppState.SourceFilter.allCases, id: \.self) { filter in
-                    Text(filter.displayName).tag(filter)
+                // Source filter menu
+                Menu {
+                    ForEach(AppState.SourceFilter.allCases, id: \.self) { filter in
+                        Button(action: { appState.sourceFilter = filter }) {
+                            HStack {
+                                Text(filter.displayName)
+                                if appState.sourceFilter == filter {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+
+                    Divider()
+
+                    ForEach(AppSource.allCases, id: \.self) { source in
+                        let count = appState.sourceCounts[source] ?? 0
+                        if count > 0 {
+                            Button(action: { appState.sourceFilter = .source(source) }) {
+                                HStack {
+                                    Image(systemName: source.icon)
+                                    Text("\(source.rawValue) (\(count))")
+                                    if case .source(let s) = appState.sourceFilter, s == source {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: sourceIcon)
+                        Text(appState.sourceFilter.displayName)
+                        Image(systemName: "chevron.down")
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(nsColor: .controlBackgroundColor))
+                    .cornerRadius(6)
                 }
-            } label: {
-                EmptyView()
+                .menuStyle(.borderlessButton)
+
+                // Category filter menu
+                Menu {
+                    Button(action: { appState.categoryFilter = .all }) {
+                        HStack {
+                            Text("All Categories")
+                            if case .all = appState.categoryFilter {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+
+                    Divider()
+
+                    ForEach(AppCategory.allCases, id: \.self) { category in
+                        let count = appState.categoryCounts[category] ?? 0
+                        if count > 0 {
+                            Button(action: { appState.categoryFilter = .category(category) }) {
+                                HStack {
+                                    Image(systemName: category.icon)
+                                    Text("\(category.rawValue) (\(count))")
+                                    if case .category(let c) = appState.categoryFilter, c == category {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if appState.uncategorizedCount > 0 {
+                        Divider()
+                        Button(action: { appState.categoryFilter = .uncategorized }) {
+                            HStack {
+                                Image(systemName: "questionmark.square")
+                                Text("Uncategorized (\(appState.uncategorizedCount))")
+                                if case .uncategorized = appState.categoryFilter {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: categoryIcon)
+                        Text(appState.categoryFilter.displayName)
+                        Image(systemName: "chevron.down")
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(nsColor: .controlBackgroundColor))
+                    .cornerRadius(6)
+                }
+                .menuStyle(.borderlessButton)
+
+                Spacer()
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
             .padding(.horizontal)
             .padding(.bottom, 8)
 
@@ -193,6 +333,14 @@ struct AppRowView: View {
             }
 
             Spacer()
+
+            // Category indicator
+            if let category = app.category {
+                Image(systemName: category.icon)
+                    .foregroundColor(category.color)
+                    .font(.caption2)
+                    .help(category.rawValue)
+            }
 
             // Source indicator
             if app.source != .applications {

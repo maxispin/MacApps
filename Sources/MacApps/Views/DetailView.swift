@@ -80,6 +80,14 @@ struct AppHeaderView: View {
                 }
 
                 HStack(spacing: 12) {
+                    if let category = app.category {
+                        Label(category.rawValue, systemImage: category.icon)
+                            .foregroundColor(category.color)
+                    } else {
+                        Label("Uncategorized", systemImage: "questionmark.circle")
+                            .foregroundColor(.secondary)
+                    }
+
                     if app.hasDescription {
                         Label("Has Description", systemImage: "checkmark.circle.fill")
                             .foregroundColor(.green)
@@ -218,6 +226,7 @@ struct DescriptionSection: View {
                         Text(isUpdating ? "Generating..." : "Generate Description")
                     }
                 }
+                .help("Use Claude AI to generate action-focused descriptions (what you can DO with this app) and assign a category. Creates short + expanded description in system language and English. Saves to Finder comment for Spotlight search.")
                 .disabled(isUpdating || !appState.claudeAvailable)
 
                 Spacer()
@@ -294,6 +303,22 @@ struct AppInfoSection: View {
                     }
                 }
 
+                GridRow {
+                    Text("Category:")
+                        .foregroundColor(.secondary)
+                    if let category = app.category {
+                        HStack(spacing: 4) {
+                            Image(systemName: category.icon)
+                                .foregroundColor(category.color)
+                            Text(category.rawValue)
+                        }
+                    } else {
+                        Text("Not categorized")
+                            .foregroundColor(.secondary)
+                            .italic()
+                    }
+                }
+
                 if let original = app.originalFinderComment, !original.isEmpty {
                     GridRow {
                         Text("Original Comment:")
@@ -322,16 +347,19 @@ struct ActionsSection: View {
                 Button(action: { appState.launchApp(app) }) {
                     Label("Launch", systemImage: "play.fill")
                 }
+                .help("Open the application. For menu bar apps, also tries to show the menu bar icon.")
 
                 if app.isMenuBarApp {
                     Button(action: { appState.openAppPreferences(app) }) {
                         Label("Open Preferences", systemImage: "gearshape")
                     }
+                    .help("Open the app's preferences/settings window (sends Cmd+, after launching)")
                 }
 
                 Button(action: { appState.openInFinder(app) }) {
                     Label("Show in Finder", systemImage: "folder")
                 }
+                .help("Reveal the application in Finder. Opens the folder containing the app.")
             }
         }
     }

@@ -5,11 +5,47 @@ This file provides context and guidelines for AI assistants (like Claude) workin
 ## Project Overview
 
 **MacApps** is a macOS SwiftUI application that:
-1. Scans `/Applications` for installed applications
+1. Scans multiple locations for installed applications
 2. Generates action-focused descriptions using Claude CLI
-3. Writes descriptions as Finder comments for searchability
-4. Stores multi-language descriptions (system language + English)
-5. Indexes descriptions for Spotlight search (CoreSpotlight)
+3. Assigns categories to apps (Development, Design, Media, etc.)
+4. Writes descriptions as Finder comments for searchability
+5. Stores multi-language descriptions (system language + English)
+6. Indexes descriptions for Spotlight search (CoreSpotlight)
+
+## Feature Reference
+
+### Toolbar Buttons
+- **Scan (Cmd+R)**: Rescans all application folders and updates the app list
+- **Update All**: Opens dialog to generate descriptions for multiple apps
+- **Reindex Spotlight**: Re-indexes all descriptions for Spotlight search
+
+### Filters
+- **Description Filter**: All / With Description / Without Description
+- **Source Filter**: All Sources / Hide Setapp / Only Setapp
+- **Category Filter**: Dropdown with all categories + uncategorized count
+
+### Generate Description
+When triggered for an app:
+1. Fetches short description (5-10 words) in system language
+2. Fetches expanded description (255 chars) in system language
+3. Fetches both in English (if system is not English)
+4. Fetches category (if not already set)
+5. Writes to Finder comment
+6. Indexes for Spotlight
+
+### Categories
+11 predefined categories with icons and colors:
+- Productivity (doc.text.fill, blue)
+- Development (chevron.left.forwardslash.chevron.right, orange)
+- Design (paintbrush.fill, purple)
+- Media (play.circle.fill, red)
+- Communication (bubble.left.and.bubble.right.fill, green)
+- Utilities (wrench.and.screwdriver.fill, gray)
+- Games (gamecontroller.fill, pink)
+- Finance (dollarsign.circle.fill, mint)
+- Education (graduationcap.fill, indigo)
+- System (gearshape.fill, secondary)
+- Other (square.grid.2x2.fill, secondary)
 
 ## Architecture
 
@@ -198,6 +234,15 @@ If UI doesn't refresh after data change:
 2. Version number must be incremented for each commit
 3. Push after commit
 4. Use conventional commit format: `feat:`, `fix:`, `docs:`
+
+**IMPORTANT**: After completing any task successfully (build passes, tests work):
+1. Increment version in MacAppsApp.swift
+2. Update CHANGELOG.md with changes
+3. Update README.md version badge if needed
+4. `git add -A && git commit -m "..."` with descriptive message
+5. `git push` to remote repository
+
+Always commit and push when the task is complete and working!
 
 ## Known Limitations
 

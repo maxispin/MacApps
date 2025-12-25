@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.8.0] - 2025-12-25
+
+### Added
+- **Categorize All button**: New toolbar button to categorize all uncategorized apps without generating descriptions (faster)
+- **Dropdown filter menus**: All three filters (Description, Source, Category) now use consistent dropdown menus
+- **Source counts in filter**: Source filter dropdown shows app count per source location
+
+### Changed
+- Filter UI redesigned with three dropdown menus in a single row
+- CLAUDE.md updated with mandatory commit/push workflow after successful tasks
+
+## [0.3.7.0] - 2025-12-25
+
+### Added
+- **Detailed tooltips**: All buttons now have descriptive help text explaining what they do
+- **Comprehensive documentation**: README and CLAUDE.md updated with full feature descriptions
+
+### Changed
+- Update All dialog now shows detailed explanation of what happens during update
+- README reorganized with sections: Core Features, App Discovery, User Interface, Data Management
+- Added Categories section to README explaining all 11 category types
+
+## [0.3.6.0] - 2025-12-25
+
+### Added
+- **App Categories**: AI-generated categories for apps (Productivity, Development, Design, Media, Communication, Utilities, Games, Finance, Education, System, Other)
+- **Category filter**: Dropdown menu to filter apps by category
+- **Category icons**: Color-coded category icons in app list and detail view
+- **Category in search**: Search also matches category names
+
+### Changed
+- Description generation now also fetches category (if not already set)
+- Category shown in app header and info section
+
 ## [0.3.5.0] - 2025-12-25
 
 ### Added
