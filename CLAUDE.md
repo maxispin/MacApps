@@ -31,9 +31,11 @@ Step-by-step guide for every Claude Code session on MacApps.
 ### 3. Before Commit
 
 - [ ] Run `swift build -c release` - must pass
-- [ ] Launch app and test manually: `pkill -f MacApps; .build/release/MacApps`
+- [ ] **MANDATORY**: Kill and launch app: `pkill -9 -f MacApps; .build/release/MacApps &`
 - [ ] Verify the change works as expected
 - [ ] Check UI updates correctly
+
+> **CRITICAL**: ALWAYS launch the app after every code change. Never commit without testing!
 
 ### 4. Commit Process
 

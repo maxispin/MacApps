@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1.2] - 2025-12-25
+
+### Changed
+- Documentation: Added mandatory app testing rule to CLAUDE.md workflow
+
+## [0.4.1.1] - 2025-12-25
+
+### Changed
+- Documentation restructure: CLAUDE.md as workflow checklist, new ARCHITECTURE.md and DEVELOPMENT.md
+
 ## [0.4.1.0] - 2025-12-25
 
 ### Added
