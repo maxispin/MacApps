@@ -2,10 +2,40 @@ import SwiftUI
 
 struct DetailView: View {
     @EnvironmentObject var appState: AppState
+    @State private var isUpdating = false
+    @State private var showSuccess = false
+    @State private var showError = false
 
     var body: some View {
         if let app = appState.selectedApp {
-            AppDetailView(app: app)
+            ScrollView {
+                VStack(spacing: 24) {
+                    AppHeaderView(app: app)
+
+                    Divider()
+
+                    DescriptionSection(
+                        app: app,
+                        isUpdating: $isUpdating,
+                        showSuccess: $showSuccess,
+                        showError: $showError
+                    )
+
+                    Divider()
+
+                    AppInfoSection(app: app)
+
+                    Divider()
+
+                    ActionsSection(app: app)
+
+                    Spacer()
+                }
+                .padding(24)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(nsColor: .windowBackgroundColor))
+            .id("\(app.path)-\(app.categories.map { $0.rawValue }.joined())-\(app.descriptions?.count ?? 0)")  // Force refresh when app data changes
         } else {
             ContentUnavailableView {
                 Label("Select an Application", systemImage: "app.dashed")
@@ -13,44 +43,6 @@ struct DetailView: View {
                 Text("Choose an app from the list to view details")
             }
         }
-    }
-}
-
-struct AppDetailView: View {
-    let app: AppInfo
-    @EnvironmentObject var appState: AppState
-    @State private var isUpdating = false
-    @State private var showSuccess = false
-    @State private var showError = false
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                AppHeaderView(app: app)
-
-                Divider()
-
-                DescriptionSection(
-                    app: app,
-                    isUpdating: $isUpdating,
-                    showSuccess: $showSuccess,
-                    showError: $showError
-                )
-
-                Divider()
-
-                AppInfoSection(app: app)
-
-                Divider()
-
-                ActionsSection(app: app)
-
-                Spacer()
-            }
-            .padding(24)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .windowBackgroundColor))
     }
 }
 

@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.10.1] - 2025-12-25
+
+### Fixed
+- **UI now updates immediately after category fetch**: DetailView now uses dynamic id based on categories and descriptions to force SwiftUI refresh
+
 ## [0.3.10.0] - 2025-12-25
 
 ### Added
 - **Multiple categories support**: Apps can now have multiple categories (used sparingly, most apps have 1)
-- **Fixed UI update after category fetch**: Categories now display immediately after being fetched
 
 ### Changed
 - Data model changed from `category: AppCategory?` to `categories: [AppCategory]`

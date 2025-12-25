@@ -5,7 +5,7 @@ struct MacAppsApp: App {
     @StateObject private var appState = AppState()
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    static let version = "0.3.10.0"
+    static let version = "0.3.10.1"
     static let buildDate = "2025-12-25"
 
     var body: some Scene {
