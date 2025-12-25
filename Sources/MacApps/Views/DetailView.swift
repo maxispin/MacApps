@@ -340,35 +340,31 @@ struct AppInfoSection: View {
                             .foregroundColor(.orange)
                     }
                 }
-            }
-            .font(.system(.body, design: .monospaced))
 
-            // Functions (what you can DO with this app)
-            if !app.functions.isEmpty {
-                Divider()
-                    .padding(.vertical, 8)
-
-                Text("Functions")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                FlowLayout(spacing: 6) {
-                    ForEach(app.functions, id: \.self) { fn in
-                        Button(action: {
-                            appState.functionFilter = fn
-                        }) {
-                            Text(fn)
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.green.opacity(0.15))
-                                .foregroundColor(.green)
-                                .cornerRadius(12)
+                if !app.functions.isEmpty {
+                    GridRow(alignment: .top) {
+                        Text("Functions:")
+                            .foregroundColor(.secondary)
+                        FlowLayout(spacing: 6) {
+                            ForEach(app.functions, id: \.self) { fn in
+                                Button(action: {
+                                    appState.functionFilter = fn
+                                }) {
+                                    Text(fn)
+                                        .font(.caption)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.green.opacity(0.15))
+                                        .foregroundColor(.green)
+                                        .cornerRadius(12)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
+            .font(.system(.body, design: .monospaced))
         }
     }
 }

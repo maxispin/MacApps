@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1.4] - 2025-12-25
+
+### Changed
+- AI prompts: Simplified to "NO ADJECTIVES" rule instead of listing forbidden words
+- Functions now shown in Application Info section
+
 ## [0.4.1.3] - 2025-12-25
 
 ### Fixed

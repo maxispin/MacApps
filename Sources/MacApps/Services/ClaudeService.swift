@@ -322,10 +322,7 @@ class ClaudeService {
             - English: "edit editing, write writing, create creating"
             - Finnish: "muokkaa muokkaaminen, kirjoita kirjoittaminen"
 
-            FORBIDDEN - NO ADJECTIVES OR PRAISE WORDS:
-            English: powerful, popular, best, amazing, professional, advanced, efficient, versatile, robust, comprehensive
-            Finnish: tehokas, monipuolinen, kätevä, suosittu, ammattimainen, edistynyt, kattava, laadukas, nopea, helppo
-            ONLY describe ACTIONS, never qualities!
+            FORBIDDEN: NO ADJECTIVES! Only verbs and nouns. Never describe app qualities, only actions.
 
             Reply ONLY with the description\(inLanguage), nothing else.
             """
@@ -353,10 +350,7 @@ class ClaudeService {
             - English: "edit editing, write writing, create creating"
             - Finnish: "muokkaa muokkaaminen, kirjoita kirjoittaminen, tallenna tallentaminen"
 
-            FORBIDDEN - NO ADJECTIVES OR PRAISE WORDS:
-            English: powerful, popular, best, amazing, professional, advanced, efficient, versatile, robust, comprehensive, easy, fast, simple
-            Finnish: tehokas, monipuolinen, kätevä, suosittu, ammattimainen, edistynyt, kattava, laadukas, nopea, helppo, yksinkertainen, vahva
-            ONLY describe ACTIONS, never qualities! No "tehokas ohjelma" or "powerful tool"!
+            FORBIDDEN: NO ADJECTIVES! Only verbs and nouns. Never describe app qualities, only actions.
 
             Include verbs like:
             """
