@@ -149,33 +149,35 @@ class ClaudeService {
         prompt += """
         \(inLanguage).
 
-        Format: One action per line. Short and simple: "verb + object" (2-3 words max).
+        Format: One action per line. Include BOTH forms for searchability:
+        - verb + object (what user does)
+        - noun form (what it is)
         List 5-15 actions, most important first.
 
-        FORBIDDEN: No praise words. No duplicate verb forms. Keep it simple!
+        FORBIDDEN: No praise words. No adjectives!
 
         """
         if language == "fi" {
             prompt += """
-            Examples:
-            muokkaa kuvia
-            rajaa valokuvia
-            säädä värejä
-            poista taustoja
-            lisää suodattimia
+            Examples (include BOTH verb and noun forms):
+            muokkaa kuvia, kuvankäsittely
+            tallenna ääntä, äänitys
+            rajaa valokuvia, rajaus
+            säädä värejä, värisäätö
+            poista taustoja, taustan poisto
 
-            Reply ONLY with the list in Finnish, one per line.
+            Reply ONLY with the list in Finnish, one per line. Each line has verb form AND noun form.
             """
         } else {
             prompt += """
-            Examples:
-            edit images
-            crop photos
-            adjust colors
-            remove backgrounds
-            add filters
+            Examples (include BOTH verb and noun forms):
+            edit images, image editing
+            record audio, audio recording
+            crop photos, photo cropping
+            adjust colors, color adjustment
+            remove backgrounds, background removal
 
-            Reply ONLY with the list in English, one per line.
+            Reply ONLY with the list in English, one per line. Each line has verb form AND noun form.
             """
         }
 

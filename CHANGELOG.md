@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2.1] - 2025-12-25
+
+### Changed
+- Functions now include both verb and noun forms for searchability (e.g., "muokkaa kuvia, kuvankäsittely")
+
 ## [0.4.2.0] - 2025-12-25
 
 ### Added
