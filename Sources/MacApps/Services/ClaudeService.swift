@@ -322,7 +322,10 @@ class ClaudeService {
             - English: "edit editing, write writing, create creating"
             - Finnish: "muokkaa muokkaaminen, kirjoita kirjoittaminen"
 
-            FORBIDDEN: No praise words like "popular", "powerful", "best", "amazing", "professional".
+            FORBIDDEN - NO ADJECTIVES OR PRAISE WORDS:
+            English: powerful, popular, best, amazing, professional, advanced, efficient, versatile, robust, comprehensive
+            Finnish: tehokas, monipuolinen, kätevä, suosittu, ammattimainen, edistynyt, kattava, laadukas, nopea, helppo
+            ONLY describe ACTIONS, never qualities!
 
             Reply ONLY with the description\(inLanguage), nothing else.
             """
@@ -350,7 +353,10 @@ class ClaudeService {
             - English: "edit editing, write writing, create creating"
             - Finnish: "muokkaa muokkaaminen, kirjoita kirjoittaminen, tallenna tallentaminen"
 
-            FORBIDDEN: No praise words! No "popular", "powerful", "best", "amazing", "professional", "advanced". Only actions!
+            FORBIDDEN - NO ADJECTIVES OR PRAISE WORDS:
+            English: powerful, popular, best, amazing, professional, advanced, efficient, versatile, robust, comprehensive, easy, fast, simple
+            Finnish: tehokas, monipuolinen, kätevä, suosittu, ammattimainen, edistynyt, kattava, laadukas, nopea, helppo, yksinkertainen, vahva
+            ONLY describe ACTIONS, never qualities! No "tehokas ohjelma" or "powerful tool"!
 
             Include verbs like:
             """

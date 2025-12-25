@@ -34,13 +34,21 @@ cat ~/Library/Application\ Support/MacApps/apps.json | jq '.[] | select(.name ==
 
 ## AI Prompt Rules
 
-### CRITICAL - NO PRAISE WORDS
-Descriptions must NEVER contain:
-- "popular", "powerful", "best", "great", "amazing", "professional"
-- "advanced", "leading", "top", "excellent", "premier", "ultimate"
-- "easily", "quickly", "seamlessly", "effortlessly"
+### CRITICAL - NO ADJECTIVES OR PRAISE WORDS
+Descriptions must NEVER contain adjectives or qualifiers:
 
-These waste character space and help no one find the app.
+**English forbidden:**
+- powerful, popular, best, great, amazing, professional
+- advanced, efficient, versatile, robust, comprehensive
+- easy, fast, simple, leading, top, excellent, ultimate
+
+**Finnish forbidden:**
+- tehokas, monipuolinen, kätevä, suosittu, ammattimainen
+- edistynyt, kattava, laadukas, nopea, helppo
+- yksinkertainen, vahva, erinomainen
+
+**Why?** These waste character space and help no one find the app.
+Only ACTION VERBS matter - what can user DO with this app!
 
 ### CRITICAL - BOTH VERB FORMS (Descriptions only)
 For searchability, descriptions include both forms:

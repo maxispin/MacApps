@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1.3] - 2025-12-25
+
+### Fixed
+- AI prompts: Extended forbidden word list with Finnish adjectives (tehokas, monipuolinen, kätevä, etc.)
+- Descriptions now focus purely on action verbs, no adjectives
+
 ## [0.4.1.2] - 2025-12-25
 
 ### Changed
