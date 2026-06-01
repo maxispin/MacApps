@@ -1,7 +1,7 @@
 import Foundation
 import AppKit
 
-class AppScanner {
+final class AppScanner: Sendable {
 
     // MARK: - Scan Locations
 
@@ -69,6 +69,8 @@ class AppScanner {
             let existingComment = getFinderComment(path: appPath)
             let isMenuBar = isMenuBarApp(appPath: appPath)
             let icon = withIcons ? getAppIcon(appPath: appPath) : nil
+            let version = getAppVersion(appPath: appPath)
+            let lastUsed = getLastUsed(appPath: appPath)
 
             apps.append(AppInfo(
                 name: appName,
@@ -77,7 +79,9 @@ class AppScanner {
                 finderComment: existingComment,
                 icon: icon,
                 isMenuBarApp: isMenuBar,
-                source: source
+                source: source,
+                lastUsed: lastUsed,
+                version: version
             ))
         }
 
@@ -113,6 +117,8 @@ class AppScanner {
                     let existingComment = getFinderComment(path: appPath)
                     let isMenuBar = isMenuBarApp(appPath: appPath)
                     let icon = withIcons ? getAppIcon(appPath: appPath) : nil
+                    let appVersion = getAppVersion(appPath: appPath)
+                    let lastUsed = getLastUsed(appPath: appPath)
 
                     apps.append(AppInfo(
                         name: appName,
@@ -121,7 +127,9 @@ class AppScanner {
                         finderComment: existingComment,
                         icon: icon,
                         isMenuBarApp: isMenuBar,
-                        source: .homebrew
+                        source: .homebrew,
+                        lastUsed: lastUsed,
+                        version: appVersion
                     ))
                 }
             }
@@ -222,5 +230,79 @@ class AppScanner {
     private func getAppIcon(appPath: String) -> NSImage? {
         let workspace = NSWorkspace.shared
         return workspace.icon(forFile: appPath)
+    }
+
+    /// Get app version from Info.plist
+    func getAppVersion(appPath: String) -> String? {
+        guard let plist = getInfoPlist(appPath: appPath) else { return nil }
+        // Try CFBundleShortVersionString first, then CFBundleVersion
+        if let version = plist["CFBundleShortVersionString"] as? String {
+            return version
+        }
+        return plist["CFBundleVersion"] as? String
+    }
+
+    /// Get last used date from file attributes (last access time)
+    func getLastUsed(appPath: String) -> Date? {
+        let fileManager = FileManager.default
+        let executablePath = "\(appPath)/Contents/MacOS"
+
+        // Try to get the executable's last access time
+        guard let contents = try? fileManager.contentsOfDirectory(atPath: executablePath),
+              let executable = contents.first else {
+            return nil
+        }
+
+        let fullPath = "\(executablePath)/\(executable)"
+        guard let attrs = try? fileManager.attributesOfItem(atPath: fullPath) else {
+            return nil
+        }
+
+        // Use modification date as a proxy (access time is often disabled on macOS)
+        return attrs[.modificationDate] as? Date
+    }
+
+    /// Get publisher/developer from Info.plist or bundle identifier
+    func getPublisher(appPath: String) -> String? {
+        guard let plist = getInfoPlist(appPath: appPath) else { return nil }
+
+        // Try NSHumanReadableCopyright first - often contains company name
+        if let copyright = plist["NSHumanReadableCopyright"] as? String {
+            // Extract company name from copyright string
+            // Common formats: "© 2024 Company Name", "Copyright 2024 Company"
+            let cleaned = copyright
+                .replacingOccurrences(of: "©", with: "")
+                .replacingOccurrences(of: "Copyright", with: "")
+                .replacingOccurrences(of: "All rights reserved.", with: "")
+                .replacingOccurrences(of: "All Rights Reserved.", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            // Remove year patterns like "2024" or "2020-2024"
+            let yearPattern = #"\d{4}(-\d{4})?\s*"#
+            if let regex = try? NSRegularExpression(pattern: yearPattern),
+               let result = regex.stringByReplacingMatches(
+                   in: cleaned,
+                   range: NSRange(cleaned.startIndex..., in: cleaned),
+                   withTemplate: ""
+               ).trimmingCharacters(in: .whitespacesAndNewlines) as String?,
+               !result.isEmpty {
+                return result
+            }
+        }
+
+        // Fall back to bundle identifier - extract company from reverse DNS
+        if let bundleId = plist["CFBundleIdentifier"] as? String {
+            // com.apple.Safari -> Apple
+            // com.microsoft.Word -> Microsoft
+            let parts = bundleId.split(separator: ".")
+            if parts.count >= 2 {
+                var company = String(parts[1])
+                // Capitalize first letter
+                company = company.prefix(1).uppercased() + company.dropFirst()
+                return company
+            }
+        }
+
+        return nil
     }
 }

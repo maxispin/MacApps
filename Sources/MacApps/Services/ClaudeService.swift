@@ -1,14 +1,14 @@
 import Foundation
 
-class ClaudeService {
+final class ClaudeService: Sendable {
 
-    private var claudePath: String?
+    private let claudePath: String?
 
     init() {
-        self.claudePath = findClaudePath()
+        self.claudePath = Self.findClaudePath()
     }
 
-    private func findClaudePath() -> String? {
+    private static func findClaudePath() -> String? {
         let paths = [
             "/usr/local/bin/claude",
             "/opt/homebrew/bin/claude",
@@ -70,6 +70,158 @@ class ClaudeService {
     struct PricingResult {
         let pricing: AppPricing?
         let durationMs: Int
+    }
+
+    /// Result for subcategory
+    struct SubcategoryResult {
+        let subcategory: String?
+        let durationMs: Int
+    }
+
+    /// Unified result for all app data in one call
+    struct UnifiedAppData {
+        let category: AppCategory?
+        let subcategory: String?
+        let pricing: AppPricing?
+        let descriptions: [String: (short: String?, expanded: String?)]  // language -> descriptions
+        let durationMs: Int
+    }
+
+    /// Generate ALL app data in a single Claude call (optimized)
+    func generateAllDataWithTiming(for appName: String, bundleId: String?, languages: [String]) -> UnifiedAppData {
+        guard let path = claudePath else {
+            return UnifiedAppData(category: nil, subcategory: nil, pricing: nil, descriptions: [:], durationMs: 0)
+        }
+
+        let startTime = CFAbsoluteTimeGetCurrent()
+        let escapedName = appName.replacingOccurrences(of: "'", with: "\\'")
+
+        // Build language list for prompt (used in dynamic prompt building below)
+
+        var prompt = """
+        Analyze the Mac application '\(escapedName)'
+        """
+        if let bundleId = bundleId {
+            prompt += " (bundle id: \(bundleId))"
+        }
+        prompt += """
+        .
+
+        Return a JSON object with this EXACT structure:
+        {
+          "category": "ONE of: Productivity, Development, Design, Media, Communication, Utilities, Games, Finance, Education, System, Other",
+          "subcategory": "ONE WORD describing main function (e.g., Email, IDE, Browser, Editor)",
+          "pricing": "ONE of: Free, Freemium, Paid, Subscription, Open Source, Unknown",
+          "descriptions": {
+        """
+
+        for (index, lang) in languages.enumerated() {
+            let langName = languageName(for: lang)
+            prompt += """
+
+            "\(lang)": {
+              "short": "5-10 word description in \(langName)",
+              "expanded": "20-50 word description in \(langName) using ALL 255 characters"
+            }
+        """
+            if index < languages.count - 1 {
+                prompt += ","
+            }
+        }
+
+        prompt += """
+
+          }
+        }
+
+        RULES:
+        - NO ADJECTIVES! Only verbs and nouns
+        - Focus on ACTION VERBS - what can user DO
+        - Finnish verbs: IMPERATIVE (käskymuoto): muokkaa, kirjoita, hallitse
+        - English verbs: base form: edit, write, manage
+        - Return ONLY valid JSON, no other text
+
+        """
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = ["-p", prompt]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let durationMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
+
+            if process.terminationStatus == 0 {
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                if let output = String(data: data, encoding: .utf8) {
+                    return parseUnifiedResponse(output, durationMs: durationMs)
+                }
+            }
+            return UnifiedAppData(category: nil, subcategory: nil, pricing: nil, descriptions: [:], durationMs: durationMs)
+        } catch {
+            let durationMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
+            return UnifiedAppData(category: nil, subcategory: nil, pricing: nil, descriptions: [:], durationMs: durationMs)
+        }
+    }
+
+    /// Parse the unified JSON response
+    private func parseUnifiedResponse(_ text: String, durationMs: Int) -> UnifiedAppData {
+        // Extract JSON from response (handle markdown code blocks)
+        var jsonText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Remove markdown code block if present
+        if jsonText.hasPrefix("```") {
+            if let startIndex = jsonText.firstIndex(of: "{"),
+               let endIndex = jsonText.lastIndex(of: "}") {
+                jsonText = String(jsonText[startIndex...endIndex])
+            }
+        }
+
+        guard let jsonData = jsonText.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
+            return UnifiedAppData(category: nil, subcategory: nil, pricing: nil, descriptions: [:], durationMs: durationMs)
+        }
+
+        // Parse category
+        let category: AppCategory?
+        if let catStr = json["category"] as? String {
+            category = parseCategory(from: catStr)
+        } else {
+            category = nil
+        }
+
+        // Parse subcategory
+        let subcategory = json["subcategory"] as? String
+
+        // Parse pricing
+        let pricing: AppPricing?
+        if let priceStr = json["pricing"] as? String {
+            pricing = parsePricing(from: priceStr)
+        } else {
+            pricing = nil
+        }
+
+        // Parse descriptions
+        var descriptions: [String: (short: String?, expanded: String?)] = [:]
+        if let descs = json["descriptions"] as? [String: [String: String]] {
+            for (lang, desc) in descs {
+                descriptions[lang] = (short: desc["short"], expanded: desc["expanded"])
+            }
+        }
+
+        return UnifiedAppData(
+            category: category,
+            subcategory: subcategory,
+            pricing: pricing,
+            descriptions: descriptions,
+            durationMs: durationMs
+        )
     }
 
     func getDescription(for appName: String, bundleId: String?, type: DescriptionType, language: String = "en") -> String? {
@@ -150,34 +302,38 @@ class ClaudeService {
         \(inLanguage).
 
         Format: One action per line. Include BOTH forms for searchability:
-        - verb + object (what user does)
+        - verb + object
         - noun form (what it is)
         List 5-15 actions, most important first.
+
+        VERB FORMAT:
+        - Finnish: Use IMPERATIVE (käskymuoto): muokkaa, kirjoita, hallitse, tallenna
+        - English: Use base form: edit, write, manage, save
 
         FORBIDDEN: No praise words. No adjectives!
 
         """
         if language == "fi" {
             prompt += """
-            Examples (include BOTH verb and noun forms):
+            Examples (imperative verb + noun form):
             muokkaa kuvia, kuvankäsittely
             tallenna ääntä, äänitys
             rajaa valokuvia, rajaus
             säädä värejä, värisäätö
             poista taustoja, taustan poisto
 
-            Reply ONLY with the list in Finnish, one per line. Each line has verb form AND noun form.
+            Reply ONLY with the list in Finnish, one per line.
             """
         } else {
             prompt += """
-            Examples (include BOTH verb and noun forms):
+            Examples (base verb + noun form):
             edit images, image editing
             record audio, audio recording
             crop photos, photo cropping
             adjust colors, color adjustment
             remove backgrounds, background removal
 
-            Reply ONLY with the list in English, one per line. Each line has verb form AND noun form.
+            Reply ONLY with the list in English, one per line.
             """
         }
 
@@ -323,6 +479,72 @@ class ClaudeService {
         return .unknown
     }
 
+    /// Get subcategory (main function in one word) for an app
+    func getSubcategoryWithTiming(for appName: String, bundleId: String?, category: AppCategory?, language: String = "en") -> SubcategoryResult {
+        guard let path = claudePath else { return SubcategoryResult(subcategory: nil, durationMs: 0) }
+
+        let startTime = CFAbsoluteTimeGetCurrent()
+
+        let escapedName = appName.replacingOccurrences(of: "'", with: "\\'")
+        let langName = languageName(for: language)
+        let inLanguage = language == "en" ? "" : " in \(langName)"
+
+        var prompt = "What is the MAIN FUNCTION of the Mac application '\(escapedName)'"
+        if let bundleId = bundleId {
+            prompt += " (bundle id: \(bundleId))"
+        }
+        if let cat = category {
+            prompt += " [category: \(cat.rawValue)]"
+        }
+        prompt += """
+        \(inLanguage)?
+
+        Reply with ONE WORD that describes its primary purpose.
+
+        Examples by category:
+        - Communication: Email, Chat, Video, Calls
+        - Development: IDE, Editor, Terminal, Database
+        - Media: Video, Audio, Photo, Streaming
+        - Design: Graphics, UI, 3D, Vector
+        - Productivity: Notes, Documents, Spreadsheet, Calendar
+        - Utilities: Files, Backup, Security, Cleanup
+        - Finance: Accounting, Trading, Banking, Budget
+
+        Reply with ONLY one word\(inLanguage). No punctuation.
+        """
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = ["-p", prompt]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let durationMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
+
+            if process.terminationStatus == 0 {
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                if let output = String(data: data, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .components(separatedBy: .whitespaces).first,  // Take first word only
+                   !output.isEmpty {
+                    // Capitalize first letter
+                    let capitalized = output.prefix(1).uppercased() + output.dropFirst().lowercased()
+                    return SubcategoryResult(subcategory: capitalized, durationMs: durationMs)
+                }
+            }
+            return SubcategoryResult(subcategory: nil, durationMs: durationMs)
+        } catch {
+            let durationMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
+            return SubcategoryResult(subcategory: nil, durationMs: durationMs)
+        }
+    }
+
     func getDescriptionWithTiming(for appName: String, bundleId: String?, type: DescriptionType, language: String = "en") -> DescriptionResult {
         guard let path = claudePath else { return DescriptionResult(text: nil, durationMs: 0) }
 
@@ -392,18 +614,18 @@ class ClaudeService {
             prompt += """
             . Focus on ACTION VERBS - what can user DO with this app.
 
-            IMPORTANT: Include BOTH verb forms for searchability:
-            - English: "edit editing, write writing, create creating"
-            - Finnish: "muokkaa muokkaaminen, kirjoita kirjoittaminen"
+            VERB FORMAT:
+            - Finnish: Use IMPERATIVE (käskymuoto): muokkaa, kirjoita, luo, hallitse, avaa
+            - English: Use base form: edit, write, create, manage, open
 
-            FORBIDDEN: NO ADJECTIVES! Only verbs and nouns. Never describe app qualities, only actions.
+            FORBIDDEN: NO ADJECTIVES! Only verbs and nouns.
 
             Reply ONLY with the description\(inLanguage), nothing else.
             """
             if language == "fi" {
-                prompt += " Example: 'Muokkaa muokkaaminen kuvia, retusoi retusoiminen, rajaa rajaaminen'"
+                prompt += " Example: 'Muokkaa kuvia, retusoi valokuvia, rajaa'"
             } else {
-                prompt += " Example: 'Edit editing photos, retouch retouching, crop cropping'"
+                prompt += " Example: 'Edit photos, retouch images, crop'"
             }
             return prompt
 
@@ -418,11 +640,10 @@ class ClaudeService {
             .
 
             CRITICAL: Focus on ACTION VERBS - what can user DO with this app!
-            The user knows what they want to DO, not the app name.
 
-            IMPORTANT: Include BOTH verb forms for searchability:
-            - English: "edit editing, write writing, create creating"
-            - Finnish: "muokkaa muokkaaminen, kirjoita kirjoittaminen, tallenna tallentaminen"
+            VERB FORMAT:
+            - Finnish: Use IMPERATIVE (käskymuoto): muokkaa, kirjoita, luo, hallitse, tallenna, jaa
+            - English: Use base form: edit, write, create, manage, save, share
 
             FORBIDDEN: NO ADJECTIVES! Only verbs and nouns. Never describe app qualities, only actions.
 
@@ -431,23 +652,22 @@ class ClaudeService {
             if language == "fi" {
                 prompt += """
 
-                - kirjoita kirjoittaminen, muokkaa muokkaaminen, luo luominen
-                - laske laskeminen, analysoi analysointi, suunnittele suunnittelu
-                - tallenna tallentaminen, jaa jakaminen, lähetä lähettäminen
-                - etsi etsiminen, selaa selaaminen, järjestä järjestäminen
+                - kirjoita, muokkaa, luo, suunnittele
+                - laske, analysoi, tallenna, jaa
+                - etsi, selaa, järjestä, hallitse
 
                 Reply ONLY with the description in Finnish. Use ALL 255 characters.
-                Example: 'Muokkaa muokkaaminen kuvia, retusoi retusoiminen valokuvia, rajaa rajaaminen, säädä säätäminen värejä, lisää lisääminen suodattimia, poista poistaminen taustoja'
+                Example: 'Muokkaa kuvia, retusoi valokuvia, rajaa, säädä värejä, lisää suodattimia, poista taustoja, yhdistä tasoja, luo kollaaseja'
                 """
             } else {
                 prompt += """
 
-                - write writing, edit editing, create creating, design designing
-                - calculate calculating, analyze analyzing, save saving, share sharing
-                - search searching, browse browsing, organize organizing, manage managing
+                - write, edit, create, design, develop
+                - calculate, analyze, save, share, export
+                - search, browse, organize, manage, sync
 
                 Reply ONLY with the description in English. Use ALL 255 characters.
-                Example: 'Edit editing photos, retouch retouching images, crop cropping, adjust adjusting colors, add adding filters, remove removing backgrounds, merge merging layers, create creating collages'
+                Example: 'Edit photos, retouch images, crop, adjust colors, add filters, remove backgrounds, merge layers, create collages'
                 """
             }
             return prompt

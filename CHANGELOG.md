@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-12-26
+
+### Added
+- **Unified AI generation**: All app data (category, subcategory, pricing, descriptions) generated in a single Claude call for speed
+- **Subcategory field**: One-word main function (e.g., Email, IDE, Browser) with filter
+- **Time filter**: Filter apps by last-used time (Today, This Week, This Month, Last Month, This Year, Older)
+- **Font settings**: Per-element font size controls with a dedicated settings sheet
+- **App metadata**: Version, last-used date, and publisher captured during scan
+
+### Changed
+- ClaudeService resolves the `claude` binary via known paths and `which`
+
 ## [0.4.3.0] - 2025-12-25
 
 ### Added

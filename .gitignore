@@ -30,6 +30,7 @@ Thumbs.db
 *.a
 *.dylib
 *.dSYM/
+MacApps.app/
 
 # IDE
 .idea/

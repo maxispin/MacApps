@@ -12,7 +12,8 @@ class AppState: ObservableObject {
     @Published var filterOption: FilterOption = .all
     @Published var sourceFilter: SourceFilter = .all
     @Published var categoryFilter: CategoryFilter = .all
-    @Published var functionFilter: String? = nil  // Filter by specific function
+    @Published var subcategoryFilter: String? = nil  // Filter by specific subcategory
+    @Published var timeFilter: TimeFilter = .all  // Filter by last modified time
     @Published var showBatchUpdateSheet = false
     @Published var showRegenerateAllSheet = false  // Regenerate all confirmation
     @Published var showProgressSheet = false  // Show progress for single app too
@@ -68,6 +69,54 @@ class AppState: ObservableObject {
         }
     }
 
+    enum TimeFilter: String, CaseIterable {
+        case all = "All Time"
+        case today = "Today"
+        case thisWeek = "This Week"
+        case thisMonth = "This Month"
+        case lastMonth = "Last Month"
+        case thisYear = "This Year"
+        case older = "Older"
+
+        var icon: String {
+            switch self {
+            case .all: return "clock"
+            case .today: return "sun.max"
+            case .thisWeek: return "calendar"
+            case .thisMonth: return "calendar.badge.clock"
+            case .lastMonth: return "calendar.badge.minus"
+            case .thisYear: return "calendar.circle"
+            case .older: return "archivebox"
+            }
+        }
+
+        func matches(_ date: Date?) -> Bool {
+            guard let date = date else { return self == .all }
+
+            let calendar = Calendar.current
+            let now = Date()
+
+            switch self {
+            case .all:
+                return true
+            case .today:
+                return calendar.isDateInToday(date)
+            case .thisWeek:
+                return calendar.isDate(date, equalTo: now, toGranularity: .weekOfYear)
+            case .thisMonth:
+                return calendar.isDate(date, equalTo: now, toGranularity: .month)
+            case .lastMonth:
+                guard let lastMonth = calendar.date(byAdding: .month, value: -1, to: now) else { return false }
+                return calendar.isDate(date, equalTo: lastMonth, toGranularity: .month)
+            case .thisYear:
+                return calendar.isDate(date, equalTo: now, toGranularity: .year)
+            case .older:
+                guard let startOfYear = calendar.date(from: calendar.dateComponents([.year], from: now)) else { return false }
+                return date < startOfYear
+            }
+        }
+    }
+
     var filteredApps: [AppInfo] {
         var result = apps
 
@@ -103,9 +152,14 @@ class AppState: ObservableObject {
             result = result.filter { !$0.hasDescription }
         }
 
-        // Apply function filter
-        if let fn = functionFilter {
-            result = result.filter { $0.functions.contains { $0.lowercased() == fn.lowercased() } }
+        // Apply subcategory filter
+        if let sub = subcategoryFilter {
+            result = result.filter { $0.subcategory?.lowercased() == sub.lowercased() }
+        }
+
+        // Apply time filter
+        if timeFilter != .all {
+            result = result.filter { timeFilter.matches($0.lastUsed) }
         }
 
         if !searchText.isEmpty {
@@ -119,8 +173,24 @@ class AppState: ObservableObject {
                 app.allDescriptionsText.lowercased().contains(query) ||
                 // Search in any category
                 app.categories.contains { $0.rawValue.lowercased().contains(query) } ||
-                // Search in functions
+                // Search in subcategory
+                (app.subcategory?.lowercased().contains(query) ?? false) ||
+                // Search in functions (still useful for search)
                 app.functions.contains { $0.lowercased().contains(query) }
+            }
+
+            // Sort: name matches first, then alphabetically
+            result.sort { app1, app2 in
+                let name1 = app1.name.lowercased()
+                let name2 = app2.name.lowercased()
+                let match1 = name1.contains(query)
+                let match2 = name2.contains(query)
+
+                if match1 && !match2 { return true }
+                if !match1 && match2 { return false }
+
+                // Both match or neither - sort alphabetically
+                return name1 < name2
             }
         }
 
@@ -157,16 +227,15 @@ class AppState: ObservableObject {
         apps.filter { $0.categories.isEmpty }.count
     }
 
-    /// All unique functions with counts, sorted by count
-    var functionCounts: [(function: String, count: Int)] {
+    /// All unique subcategories with counts, sorted by count
+    var subcategoryCounts: [(subcategory: String, count: Int)] {
         var counts: [String: Int] = [:]
         for app in apps {
-            for fn in app.functions {
-                let key = fn.lowercased()
-                counts[key, default: 0] += 1
+            if let sub = app.subcategory {
+                counts[sub, default: 0] += 1
             }
         }
-        return counts.map { (function: $0.key, count: $0.value) }
+        return counts.map { (subcategory: $0.key, count: $0.value) }
             .sorted { $0.count > $1.count }
     }
 
@@ -210,6 +279,10 @@ class AppState: ObservableObject {
                     categories: stored.categories ?? [],
                     functions: stored.functions ?? [],
                     pricing: stored.pricing ?? .unknown,
+                    lastUsed: scanner.getLastUsed(appPath: stored.path),
+                    version: scanner.getAppVersion(appPath: stored.path),
+                    publisher: scanner.getPublisher(appPath: stored.path),
+                    subcategory: stored.subcategory,
                     descriptions: stored.descriptions
                 )
             }.sorted { $0.name.lowercased() < $1.name.lowercased() }
@@ -257,10 +330,10 @@ class AppState: ObservableObject {
         }
     }
 
-    /// Force regenerate all data for an app (clears existing first)
+    /// Force regenerate all data for an app using SINGLE optimized Claude call
     func regenerateApp(_ app: AppInfo) async {
         showProgressSheet = true
-        currentUpdateText = "Regenerating \(app.name)..."
+        currentUpdateText = "[\(app.name)] Generating all data..."
         lastRequestDuration = 0
 
         guard let index = apps.firstIndex(where: { $0.path == app.path }) else {
@@ -273,163 +346,194 @@ class AppState: ObservableObject {
         apps[index].categories = []
         apps[index].functions = []
         apps[index].pricing = .unknown
+        apps[index].subcategory = nil
 
-        // Generate fresh descriptions
-        currentUpdateText = "[\(app.name)] Descriptions..."
-        let result = await generateMultiLanguageDescriptions(for: apps[index])
-        apps[index].descriptions = result.descriptions
+        // SINGLE Claude call for ALL data
+        let languages = AppDatabase.targetLanguages
+        let result = await Task.detached(priority: .userInitiated) { [claude] in
+            return claude.generateAllDataWithTiming(for: app.name, bundleId: app.bundleIdentifier, languages: languages)
+        }.value
 
-        if let finderComment = result.finderComment {
-            let success = writer.setFinderComment(path: app.path, comment: finderComment)
+        lastRequestDuration = result.durationMs
+        currentUpdateText = "[\(app.name)] Received data in \(result.durationMs)ms"
+
+        // Apply category
+        if let category = result.category {
+            apps[index].categories = [category]
+            database.updateCategories(for: app.path, categories: [category])
+        }
+
+        // Apply subcategory
+        if let subcategory = result.subcategory {
+            apps[index].subcategory = subcategory
+            database.updateSubcategory(for: app.path, subcategory: subcategory)
+        }
+
+        // Apply pricing
+        if let pricing = result.pricing {
+            apps[index].pricing = pricing
+            database.updatePricing(for: app.path, pricing: pricing)
+        }
+
+        // Apply descriptions
+        var allDescriptions: [AppDatabase.LocalizedDescription] = []
+        var finderComment: String? = nil
+        let systemLang = AppDatabase.systemLanguage
+
+        for (lang, desc) in result.descriptions {
+            let localizedDesc = AppDatabase.LocalizedDescription(
+                language: lang,
+                shortDescription: desc.short,
+                expandedDescription: desc.expanded,
+                fetchedAt: Date()
+            )
+            allDescriptions.append(localizedDesc)
+            database.updateDescription(for: app.path, language: lang, short: desc.short, expanded: desc.expanded)
+
+            // Build Finder comment from system language
+            if lang == systemLang, let short = desc.short {
+                if let expanded = desc.expanded {
+                    finderComment = String("\(short) | \(expanded)".prefix(255))
+                } else {
+                    finderComment = String(short.prefix(255))
+                }
+            }
+        }
+
+        apps[index].descriptions = allDescriptions
+
+        // Write Finder comment
+        if let comment = finderComment {
+            let success = writer.setFinderComment(path: app.path, comment: comment)
             if success {
-                apps[index].finderComment = finderComment
-                database.updateComment(for: app.path, comment: finderComment)
+                apps[index].finderComment = comment
+                database.updateComment(for: app.path, comment: comment)
             }
             writer.indexForSpotlight(
                 path: app.path,
                 name: app.name,
                 bundleIdentifier: app.bundleIdentifier,
-                description: finderComment
+                description: comment
             )
-        }
-
-        // Generate fresh category
-        currentUpdateText = "[\(app.name)] Category..."
-        let categoryResult = await Task.detached(priority: .userInitiated) { [claude] in
-            return claude.getCategoryWithTiming(for: app.name, bundleId: app.bundleIdentifier)
-        }.value
-
-        if let category = categoryResult.category {
-            apps[index].categories = [category]
-            database.updateCategories(for: app.path, categories: [category])
-            currentUpdateText = "[\(app.name)] Category: \(category.rawValue) ✓"
-        }
-
-        // Generate fresh functions
-        currentUpdateText = "[\(app.name)] Functions..."
-        let functionsResult = await Task.detached(priority: .userInitiated) { [claude] in
-            return claude.getFunctionsWithTiming(for: app.name, bundleId: app.bundleIdentifier, language: AppDatabase.systemLanguage)
-        }.value
-
-        if !functionsResult.functions.isEmpty {
-            apps[index].functions = functionsResult.functions
-            database.updateFunctions(for: app.path, functions: functionsResult.functions)
-            currentUpdateText = "[\(app.name)] \(functionsResult.functions.count) functions ✓"
-        }
-
-        // Generate fresh pricing
-        currentUpdateText = "[\(app.name)] Pricing..."
-        let pricingResult = await Task.detached(priority: .userInitiated) { [claude] in
-            return claude.getPricingWithTiming(for: app.name, bundleId: app.bundleIdentifier)
-        }.value
-
-        if let pricing = pricingResult.pricing {
-            apps[index].pricing = pricing
-            database.updatePricing(for: app.path, pricing: pricing)
-            currentUpdateText = "[\(app.name)] Pricing: \(pricing.rawValue) ✓"
+            lastGeneratedDescription = comment
         }
 
         if selectedApp?.path == app.path {
             selectedApp = apps[index]
         }
 
-        currentUpdateText = "Done!"
+        currentUpdateText = "Done! (\(result.durationMs)ms)"
         try? await Task.sleep(nanoseconds: 1_000_000_000)
         showProgressSheet = false
         currentUpdateText = ""
     }
 
-    // Update single app with descriptions for all target languages
+    /// Update single app - uses SINGLE optimized Claude call if any data missing
     func updateSingleApp(_ app: AppInfo) async {
         showProgressSheet = true
-        currentUpdateText = "Aloitetaan \(app.name)..."
+        currentUpdateText = "[\(app.name)] Checking..."
         lastRequestDuration = 0
 
-        // Get LATEST version from apps array (with current descriptions from database)
-        let currentApp: AppInfo
-        if let index = apps.firstIndex(where: { $0.path == app.path }) {
-            currentApp = apps[index]
+        guard let index = apps.firstIndex(where: { $0.path == app.path }) else {
+            showProgressSheet = false
+            return
+        }
+
+        let currentApp = apps[index]
+
+        // Check what's missing
+        let needsDescriptions = !currentApp.hasAllLanguages
+        let needsCategory = currentApp.categories.isEmpty
+        let needsPricing = currentApp.pricing == .unknown
+        let needsSubcategory = currentApp.subcategory == nil
+
+        // If anything is missing, use unified call
+        if needsDescriptions || needsCategory || needsPricing || needsSubcategory {
+            currentUpdateText = "[\(app.name)] Generating all data..."
+
+            let languages = AppDatabase.targetLanguages
+            let result = await Task.detached(priority: .userInitiated) { [claude] in
+                return claude.generateAllDataWithTiming(for: app.name, bundleId: app.bundleIdentifier, languages: languages)
+            }.value
+
+            lastRequestDuration = result.durationMs
+            currentUpdateText = "[\(app.name)] Data received (\(result.durationMs)ms)"
+
+            // Apply category (only if was missing)
+            if needsCategory, let category = result.category {
+                apps[index].categories = [category]
+                database.updateCategories(for: app.path, categories: [category])
+            }
+
+            // Apply subcategory (only if was missing)
+            if needsSubcategory, let subcategory = result.subcategory {
+                apps[index].subcategory = subcategory
+                database.updateSubcategory(for: app.path, subcategory: subcategory)
+            }
+
+            // Apply pricing (only if was missing)
+            if needsPricing, let pricing = result.pricing {
+                apps[index].pricing = pricing
+                database.updatePricing(for: app.path, pricing: pricing)
+            }
+
+            // Apply descriptions (only if was missing)
+            if needsDescriptions {
+                var allDescriptions = currentApp.descriptions ?? []
+                var finderComment: String? = nil
+                let systemLang = AppDatabase.systemLanguage
+
+                for (lang, desc) in result.descriptions {
+                    // Only add if this language was missing
+                    if !currentApp.hasCompleteDescription(for: lang) {
+                        let localizedDesc = AppDatabase.LocalizedDescription(
+                            language: lang,
+                            shortDescription: desc.short,
+                            expandedDescription: desc.expanded,
+                            fetchedAt: Date()
+                        )
+                        allDescriptions.removeAll { $0.language == lang }
+                        allDescriptions.append(localizedDesc)
+                        database.updateDescription(for: app.path, language: lang, short: desc.short, expanded: desc.expanded)
+                    }
+
+                    // Build Finder comment from system language
+                    if lang == systemLang, let short = desc.short {
+                        if let expanded = desc.expanded {
+                            finderComment = String("\(short) | \(expanded)".prefix(255))
+                        } else {
+                            finderComment = String(short.prefix(255))
+                        }
+                    }
+                }
+
+                apps[index].descriptions = allDescriptions
+
+                // Write Finder comment
+                if let comment = finderComment {
+                    let success = writer.setFinderComment(path: app.path, comment: comment)
+                    if success {
+                        apps[index].finderComment = comment
+                        database.updateComment(for: app.path, comment: comment)
+                    }
+                    writer.indexForSpotlight(
+                        path: app.path,
+                        name: app.name,
+                        bundleIdentifier: app.bundleIdentifier,
+                        description: comment
+                    )
+                    lastGeneratedDescription = comment
+                }
+            }
         } else {
-            currentApp = app
+            currentUpdateText = "[\(app.name)] All data already exists!"
         }
 
-        let result = await generateMultiLanguageDescriptions(for: currentApp)
-
-        if let index = apps.firstIndex(where: { $0.path == app.path }) {
-            // Update descriptions in memory
-            apps[index].descriptions = result.descriptions
-
-            // Write primary description to Finder comment
-            if let finderComment = result.finderComment {
-                let success = writer.setFinderComment(path: app.path, comment: finderComment)
-                if success {
-                    apps[index].finderComment = finderComment
-                    database.updateComment(for: app.path, comment: finderComment)
-                }
-                lastGeneratedDescription = finderComment
-
-                // Index for Spotlight - searchable without prefixes!
-                writer.indexForSpotlight(
-                    path: app.path,
-                    name: app.name,
-                    bundleIdentifier: app.bundleIdentifier,
-                    description: finderComment
-                )
-            }
-
-            // Fetch category if missing
-            if apps[index].categories.isEmpty {
-                currentUpdateText = "[\(app.name)] Kategoria..."
-                let categoryResult = await Task.detached(priority: .userInitiated) { [claude] in
-                    return claude.getCategoryWithTiming(for: app.name, bundleId: app.bundleIdentifier)
-                }.value
-
-                if let category = categoryResult.category {
-                    apps[index].categories = [category]
-                    database.updateCategories(for: app.path, categories: [category])
-                    currentUpdateText = "[\(app.name)] Kategoria: \(category.rawValue) ✓"
-                    lastRequestDuration = categoryResult.durationMs
-                }
-            }
-
-            // Fetch functions if missing
-            if apps[index].functions.isEmpty {
-                currentUpdateText = "[\(app.name)] Toiminnot..."
-                let functionsResult = await Task.detached(priority: .userInitiated) { [claude] in
-                    return claude.getFunctionsWithTiming(for: app.name, bundleId: app.bundleIdentifier, language: AppDatabase.systemLanguage)
-                }.value
-
-                if !functionsResult.functions.isEmpty {
-                    apps[index].functions = functionsResult.functions
-                    database.updateFunctions(for: app.path, functions: functionsResult.functions)
-                    currentUpdateText = "[\(app.name)] \(functionsResult.functions.count) toimintoa ✓"
-                    lastRequestDuration = functionsResult.durationMs
-                }
-            }
-
-            // Fetch pricing if missing
-            if apps[index].pricing == .unknown {
-                currentUpdateText = "[\(app.name)] Hinnoittelu..."
-                let pricingResult = await Task.detached(priority: .userInitiated) { [claude] in
-                    return claude.getPricingWithTiming(for: app.name, bundleId: app.bundleIdentifier)
-                }.value
-
-                if let pricing = pricingResult.pricing {
-                    apps[index].pricing = pricing
-                    database.updatePricing(for: app.path, pricing: pricing)
-                    currentUpdateText = "[\(app.name)] Hinnoittelu: \(pricing.rawValue) ✓"
-                    lastRequestDuration = pricingResult.durationMs
-                }
-            }
-
-            if selectedApp?.path == app.path {
-                selectedApp = apps[index]
-            }
+        if selectedApp?.path == app.path {
+            selectedApp = apps[index]
         }
 
-        currentUpdateText = "Valmis!"
-
-        // Auto-close after 1 second
+        currentUpdateText = "Valmis! (\(lastRequestDuration)ms)"
         try? await Task.sleep(nanoseconds: 1_000_000_000)
         showProgressSheet = false
         currentUpdateText = ""
@@ -642,6 +746,7 @@ class AppState: ObservableObject {
             apps[appIndex].categories = []
             apps[appIndex].functions = []
             apps[appIndex].pricing = .unknown
+            apps[appIndex].subcategory = nil
 
             // Generate fresh descriptions
             currentUpdateText = "[\(app.name)] Descriptions..."
@@ -694,6 +799,18 @@ class AppState: ObservableObject {
             if let pricing = pricingResult.pricing {
                 apps[appIndex].pricing = pricing
                 database.updatePricing(for: app.path, pricing: pricing)
+            }
+
+            // Generate subcategory
+            currentUpdateText = "[\(app.name)] Subcategory..."
+            let category = apps[appIndex].category
+            let subcategoryResult = await Task.detached(priority: .userInitiated) { [claude] in
+                return claude.getSubcategoryWithTiming(for: app.name, bundleId: app.bundleIdentifier, category: category, language: AppDatabase.systemLanguage)
+            }.value
+
+            if let subcategory = subcategoryResult.subcategory {
+                apps[appIndex].subcategory = subcategory
+                database.updateSubcategory(for: app.path, subcategory: subcategory)
             }
 
             updated += 1

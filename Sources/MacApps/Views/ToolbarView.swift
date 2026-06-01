@@ -249,11 +249,28 @@ struct UpdateProgressView: View {
                     Text(name)
                         .font(.headline)
 
-                    // Status text
-                    Text(appState.currentUpdateText)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
+                    // Claude API status with indicator
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 8, height: 8)
+                        Text("Claude API")
+                            .font(.caption2)
+                            .foregroundColor(.green)
+                        Text("•")
+                            .foregroundColor(.secondary)
+                        Text(appState.currentUpdateText)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    // Request timing
+                    if appState.lastRequestDuration > 0 {
+                        Text("Last request: \(appState.lastRequestDuration)ms")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
 
                     // Last generated description
                     if !appState.lastGeneratedDescription.isEmpty {

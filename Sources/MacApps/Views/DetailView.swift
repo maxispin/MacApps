@@ -14,20 +14,29 @@ struct DetailView: View {
 
                     Divider()
 
-                    DescriptionSection(
-                        app: app,
-                        isUpdating: $isUpdating,
-                        showSuccess: $showSuccess,
-                        showError: $showError
-                    )
+                    // Two column layout: Descriptions left, Info+Actions right
+                    HStack(alignment: .top, spacing: 24) {
+                        // Left column: Descriptions
+                        DescriptionSection(
+                            app: app,
+                            isUpdating: $isUpdating,
+                            showSuccess: $showSuccess,
+                            showError: $showError
+                        )
+                        .frame(maxWidth: .infinity)
 
-                    Divider()
+                        Divider()
 
-                    AppInfoSection(app: app)
+                        // Right column: Info + Actions
+                        VStack(alignment: .leading, spacing: 24) {
+                            AppInfoSection(app: app)
 
-                    Divider()
+                            Divider()
 
-                    ActionsSection(app: app)
+                            ActionsSection(app: app)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
 
                     Spacer()
                 }
@@ -35,13 +44,44 @@ struct DetailView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(nsColor: .windowBackgroundColor))
-            .id("\(app.path)-\(app.categories.map { $0.rawValue }.joined())-\(app.descriptions?.count ?? 0)-\(app.functions.count)-\(app.pricing.rawValue)")  // Force refresh when app data changes
+            .id("\(app.path)-\(app.categories.map { $0.rawValue }.joined())-\(app.descriptions?.count ?? 0)-\(app.functions.count)-\(app.pricing.rawValue)-\(app.subcategory ?? "")")  // Force refresh when app data changes
         } else {
-            ContentUnavailableView {
-                Label("Select an Application", systemImage: "app.dashed")
-            } description: {
-                Text("Choose an app from the list to view details")
+            VStack(spacing: 24) {
+                Spacer()
+
+                Image(systemName: "app.dashed")
+                    .font(.system(size: 64))
+                    .foregroundColor(.secondary)
+
+                Text("Select an Application")
+                    .font(.title)
+                    .fontWeight(.semibold)
+
+                Text("Choose an app from the sidebar to view details")
+                    .foregroundColor(.secondary)
+
+                Divider()
+                    .frame(width: 300)
+                    .padding(.vertical)
+
+                // Available actions
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Available Actions")
+                        .font(.headline)
+                        .padding(.bottom, 4)
+
+                    ActionRow(icon: "sparkles", title: "Update All", description: "Generate descriptions for apps missing data")
+                    ActionRow(icon: "arrow.triangle.2.circlepath", title: "Regenerate All", description: "Force regenerate all data for all apps")
+                    ActionRow(icon: "tag", title: "Categorize", description: "Assign categories to uncategorized apps")
+                    ActionRow(icon: "arrow.clockwise", title: "Scan", description: "Rescan application folders for new apps")
+                }
+                .padding()
+                .background(Color(nsColor: .controlBackgroundColor))
+                .cornerRadius(12)
+
+                Spacer()
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
@@ -306,6 +346,15 @@ struct AppInfoSection: View {
                     }
                 }
 
+                if let publisher = app.publisher {
+                    GridRow {
+                        Text("Publisher:")
+                            .foregroundColor(.secondary)
+                        Text(publisher)
+                            .textSelection(.enabled)
+                    }
+                }
+
                 GridRow {
                     Text("Source:")
                         .foregroundColor(.secondary)
@@ -323,6 +372,12 @@ struct AppInfoSection: View {
                             Image(systemName: category.icon)
                                 .foregroundColor(category.color)
                             Text(category.rawValue)
+                            if let subcategory = app.subcategory {
+                                Text("›")
+                                    .foregroundColor(.secondary)
+                                Text(subcategory)
+                                    .foregroundColor(category.color.opacity(0.8))
+                            }
                         }
                     } else {
                         Text("Not categorized")
@@ -347,6 +402,23 @@ struct AppInfoSection: View {
                     }
                 }
 
+                if let version = app.version {
+                    GridRow {
+                        Text("Version:")
+                            .foregroundColor(.secondary)
+                        Text(version)
+                    }
+                }
+
+                if let lastUsed = app.lastUsed {
+                    GridRow {
+                        Text("Last Modified:")
+                            .foregroundColor(.secondary)
+                        Text(lastUsed, style: .relative)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
                 if let original = app.originalFinderComment, !original.isEmpty {
                     GridRow {
                         Text("Original Comment:")
@@ -363,18 +435,13 @@ struct AppInfoSection: View {
                             .foregroundColor(.secondary)
                         FlowLayout(spacing: 6) {
                             ForEach(app.functions, id: \.self) { fn in
-                                Button(action: {
-                                    appState.functionFilter = fn
-                                }) {
-                                    Text(fn)
-                                        .font(.caption)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(Color.green.opacity(0.15))
-                                        .foregroundColor(.green)
-                                        .cornerRadius(12)
-                                }
-                                .buttonStyle(.plain)
+                                Text(fn)
+                                    .font(.caption)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.green.opacity(0.15))
+                                    .foregroundColor(.green)
+                                    .cornerRadius(12)
                             }
                         }
                     }
@@ -455,6 +522,30 @@ struct ActionsSection: View {
                     Label("Show in Finder", systemImage: "folder")
                 }
                 .help("Reveal the application in Finder. Opens the folder containing the app.")
+            }
+        }
+    }
+}
+
+/// Row for displaying available actions in empty state
+struct ActionRow: View {
+    let icon: String
+    let title: String
+    let description: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(.accentColor)
+                .frame(width: 30)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .fontWeight(.medium)
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
         }
     }

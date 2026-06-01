@@ -112,6 +112,10 @@ struct AppInfo: Identifiable, Hashable {
     var categories: [AppCategory] = []  // AI-generated categories (usually 1, max 2-3)
     var functions: [String] = []  // Action verbs: "edit images", "send messages", etc.
     var pricing: AppPricing = .unknown  // Pricing model
+    var lastUsed: Date?  // When app was last launched
+    var version: String?  // Current installed version
+    var publisher: String?  // Developer/publisher name
+    var subcategory: String?  // Main function in one word (e.g., "Email", "IDE", "Browser")
 
     // Multi-language descriptions stored in database
     var descriptions: [AppDatabase.LocalizedDescription]?
@@ -215,7 +219,8 @@ struct AppInfo: Identifiable, Hashable {
         lhs.descriptions == rhs.descriptions &&
         lhs.categories == rhs.categories &&
         lhs.functions == rhs.functions &&
-        lhs.pricing == rhs.pricing
+        lhs.pricing == rhs.pricing &&
+        lhs.subcategory == rhs.subcategory
     }
 }
 

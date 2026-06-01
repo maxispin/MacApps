@@ -40,6 +40,7 @@ class AppDatabase {
         var categories: [AppCategory]?  // AI-generated categories (usually 1, max 2-3)
         var functions: [String]?  // Action verbs: "edit images", "send messages", etc.
         var pricing: AppPricing?  // Pricing model (free, paid, subscription, etc.)
+        var subcategory: String?  // Main function in one word (e.g., "Email", "IDE", "Browser")
 
         // Multi-language descriptions
         var descriptions: [LocalizedDescription]?
@@ -105,10 +106,11 @@ class AppDatabase {
                 originalComment = app.finderComment
             }
 
-            // Preserve existing categories, functions, pricing if not overwritten
+            // Preserve existing categories, functions, pricing, subcategory if not overwritten
             let categories = app.categories.isEmpty ? existingApp?.categories : app.categories
             let functions = app.functions.isEmpty ? existingApp?.functions : app.functions
             let pricing = app.pricing == .unknown ? existingApp?.pricing : app.pricing
+            let subcategory = app.subcategory ?? existingApp?.subcategory
 
             return StoredApp(
                 path: app.path,
@@ -122,6 +124,7 @@ class AppDatabase {
                 categories: categories,
                 functions: functions,
                 pricing: pricing,
+                subcategory: subcategory,
                 descriptions: app.descriptions ?? existingDescriptions
             )
         }
@@ -224,6 +227,16 @@ class AppDatabase {
         var stored = load()
         if let index = stored.firstIndex(where: { $0.path == path }) {
             stored[index].pricing = pricing
+            stored[index].lastScanned = Date()
+            saveStored(stored)
+        }
+    }
+
+    /// Update subcategory for an app
+    func updateSubcategory(for path: String, subcategory: String) {
+        var stored = load()
+        if let index = stored.firstIndex(where: { $0.path == path }) {
+            stored[index].subcategory = subcategory
             stored[index].lastScanned = Date()
             saveStored(stored)
         }

@@ -7,44 +7,45 @@ struct ContentView: View {
     var body: some View {
         NavigationSplitView {
             SidebarView()
+                .environment(\.defaultMinListRowHeight, 44 * fontSettings.fontScale)
         } detail: {
             DetailView()
         }
+        .font(.system(size: 13 * fontSettings.fontScale))
         .toolbar {
             ToolbarView()
         }
         .sheet(isPresented: $appState.showBatchUpdateSheet) {
             BatchUpdateSheet()
                 .environmentObject(appState)
+                .font(.system(size: 13 * fontSettings.fontScale))
         }
         .sheet(isPresented: $appState.showRegenerateAllSheet) {
             RegenerateAllSheet()
                 .environmentObject(appState)
+                .font(.system(size: 13 * fontSettings.fontScale))
         }
         .sheet(isPresented: $appState.showProgressSheet) {
             ProgressSheet()
                 .environmentObject(appState)
+                .font(.system(size: 13 * fontSettings.fontScale))
+        }
+        .sheet(isPresented: $fontSettings.showSettingsSheet) {
+            FontSettingsSheet()
+                .environmentObject(fontSettings)
         }
         .task {
             await appState.loadFromCache()
         }
-        .environment(\.sizeCategory, fontSettings.dynamicTypeSize)
-    }
-}
-
-extension FontSettings {
-    var dynamicTypeSize: ContentSizeCategory {
-        switch fontScale {
-        case ..<0.7: return .extraSmall
-        case 0.7..<0.85: return .small
-        case 0.85..<0.95: return .medium
-        case 0.95..<1.05: return .large
-        case 1.05..<1.15: return .extraLarge
-        case 1.15..<1.3: return .extraExtraLarge
-        case 1.3..<1.5: return .extraExtraExtraLarge
-        case 1.5..<1.7: return .accessibilityMedium
-        case 1.7..<1.9: return .accessibilityLarge
-        default: return .accessibilityExtraLarge
+        .overlay(alignment: .bottomTrailing) {
+            if fontSettings.fontScale != 1.0 {
+                Text("\(Int(fontSettings.fontScale * 100))%")
+                    .font(.caption2)
+                    .padding(4)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(4)
+                    .padding(8)
+            }
         }
     }
 }
@@ -219,25 +220,25 @@ struct SidebarView: View {
                 }
                 .menuStyle(.borderlessButton)
 
-                // Function filter menu
+                // Subcategory filter menu
                 Menu {
-                    Button(action: { appState.functionFilter = nil }) {
+                    Button(action: { appState.subcategoryFilter = nil }) {
                         HStack {
-                            Text("All Functions")
-                            if appState.functionFilter == nil {
+                            Text("All Subcategories")
+                            if appState.subcategoryFilter == nil {
                                 Image(systemName: "checkmark")
                             }
                         }
                     }
 
-                    if !appState.functionCounts.isEmpty {
+                    if !appState.subcategoryCounts.isEmpty {
                         Divider()
 
-                        ForEach(appState.functionCounts.prefix(20), id: \.function) { item in
-                            Button(action: { appState.functionFilter = item.function }) {
+                        ForEach(appState.subcategoryCounts.prefix(20), id: \.subcategory) { item in
+                            Button(action: { appState.subcategoryFilter = item.subcategory }) {
                                 HStack {
-                                    Text("\(item.function) (\(item.count))")
-                                    if appState.functionFilter?.lowercased() == item.function.lowercased() {
+                                    Text("\(item.subcategory) (\(item.count))")
+                                    if appState.subcategoryFilter?.lowercased() == item.subcategory.lowercased() {
                                         Image(systemName: "checkmark")
                                     }
                                 }
@@ -246,14 +247,41 @@ struct SidebarView: View {
                     }
                 } label: {
                     HStack {
-                        Image(systemName: "bolt.fill")
-                        Text(appState.functionFilter ?? "Functions")
+                        Image(systemName: "tag.fill")
+                        Text(appState.subcategoryFilter ?? "Subcategory")
                         Image(systemName: "chevron.down")
                     }
                     .font(.caption)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(appState.functionFilter != nil ? Color.purple.opacity(0.2) : Color(nsColor: .controlBackgroundColor))
+                    .background(appState.subcategoryFilter != nil ? Color.purple.opacity(0.2) : Color(nsColor: .controlBackgroundColor))
+                    .cornerRadius(6)
+                }
+                .menuStyle(.borderlessButton)
+
+                // Time filter menu
+                Menu {
+                    ForEach(AppState.TimeFilter.allCases, id: \.self) { filter in
+                        Button(action: { appState.timeFilter = filter }) {
+                            HStack {
+                                Image(systemName: filter.icon)
+                                Text(filter.rawValue)
+                                if appState.timeFilter == filter {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: appState.timeFilter.icon)
+                        Text(appState.timeFilter.rawValue)
+                        Image(systemName: "chevron.down")
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(appState.timeFilter != .all ? Color.orange.opacity(0.2) : Color(nsColor: .controlBackgroundColor))
                     .cornerRadius(6)
                 }
                 .menuStyle(.borderlessButton)
@@ -275,13 +303,17 @@ struct SidebarView: View {
 
             Divider()
 
-            // Version footer
+            // Version footer with Claude status
             HStack {
                 Text("MacApps v\(MacAppsApp.version)")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
-                if !appState.claudeAvailable {
+                if appState.claudeAvailable {
+                    Label("Claude CLI", systemImage: "checkmark.circle.fill")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                } else {
                     Label("Claude CLI not found", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption2)
                         .foregroundColor(.orange)
@@ -366,6 +398,7 @@ struct AppListView: View {
 struct AppRowView: View {
     let app: AppInfo
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var fontSettings: FontSettings
     @ObservedObject var iconManager = IconManager.shared
     @State private var icon: NSImage?
 
@@ -378,17 +411,17 @@ struct AppRowView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(app.name)
-                    .font(.headline)
+                    .font(.system(size: fontSettings.appNameSize, weight: .semibold))
                     .lineLimit(1)
 
                 if let description = app.displayDescription, !description.isEmpty {
                     Text(description)
-                        .font(.caption)
+                        .font(.system(size: fontSettings.descriptionSize))
                         .foregroundColor(.secondary)
                         .lineLimit(2)
                 } else {
                     Text("No description")
-                        .font(.caption)
+                        .font(.system(size: fontSettings.descriptionSize))
                         .foregroundColor(.orange)
                         .italic()
                 }
