@@ -370,9 +370,9 @@ struct AppListView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        List(appState.filteredApps, selection: $appState.selectedApp) { app in
+        List(appState.filteredApps, selection: $appState.selectedAppPath) { app in
             AppRowView(app: app)
-                .tag(app)
+                .tag(app.path)
         }
         .listStyle(.inset)
         .overlay {

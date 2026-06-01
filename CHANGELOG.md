@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0.1] - 2026-06-01
+
+### Fixed
+- **List selection**: Track selection by stable app path instead of value, so the selection survives rescans/data edits and clears automatically when an app leaves the filtered list
+- **Stale selection**: `selectedApp` is now resolved live from the app list, eliminating stale copies after AI regeneration
+- **Detail refresh**: Detail view now refreshes when `finderComment`, version, publisher, last-used, or menu-bar status changes
+
 ## [0.5.0] - 2025-12-26
 
 ### Added

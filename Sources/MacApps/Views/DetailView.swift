@@ -44,7 +44,7 @@ struct DetailView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(nsColor: .windowBackgroundColor))
-            .id("\(app.path)-\(app.categories.map { $0.rawValue }.joined())-\(app.descriptions?.count ?? 0)-\(app.functions.count)-\(app.pricing.rawValue)-\(app.subcategory ?? "")")  // Force refresh when app data changes
+            .id("\(app.path)-\(app.categories.map { $0.rawValue }.joined())-\(app.descriptions?.count ?? 0)-\(app.functions.count)-\(app.pricing.rawValue)-\(app.subcategory ?? "")-\(app.finderComment ?? "")-\(app.version ?? "")-\(app.publisher ?? "")-\(app.lastUsed?.timeIntervalSince1970 ?? 0)-\(app.isMenuBarApp)")  // Force refresh when app data changes
         } else {
             VStack(spacing: 24) {
                 Spacer()

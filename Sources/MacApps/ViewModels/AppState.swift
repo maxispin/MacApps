@@ -7,7 +7,20 @@ class AppState: ObservableObject {
     @Published var searchText: String = ""
     @Published var scanStatus: ScanStatus = .idle
     @Published var updateStatus: UpdateStatus = .idle
-    @Published var selectedApp: AppInfo?
+    /// Selection is tracked by stable path, not by value.
+    /// This keeps List selection consistent across rescans and data mutations,
+    /// and lets SwiftUI auto-clear a selection that drops out of the filtered list.
+    @Published var selectedAppPath: String?
+
+    /// The currently selected app, always resolved against the current `apps`
+    /// so callers never hold a stale copy.
+    var selectedApp: AppInfo? {
+        get {
+            guard let path = selectedAppPath else { return nil }
+            return apps.first(where: { $0.path == path })
+        }
+        set { selectedAppPath = newValue?.path }
+    }
     @Published var selectedDescriptionType: DescriptionType = .expanded
     @Published var filterOption: FilterOption = .all
     @Published var sourceFilter: SourceFilter = .all
@@ -321,9 +334,7 @@ class AppState: ObservableObject {
         if let index = apps.firstIndex(where: { $0.path == app.path }) {
             let newComment = scanner.getFinderComment(path: app.path)
             apps[index].finderComment = newComment
-            if selectedApp?.path == app.path {
-                selectedApp = apps[index]
-            }
+            // selectedApp is computed from `apps`, so it reflects this change automatically.
             if let comment = newComment {
                 database.updateComment(for: app.path, comment: comment)
             }
@@ -416,10 +427,6 @@ class AppState: ObservableObject {
                 description: comment
             )
             lastGeneratedDescription = comment
-        }
-
-        if selectedApp?.path == app.path {
-            selectedApp = apps[index]
         }
 
         currentUpdateText = "Done! (\(result.durationMs)ms)"
@@ -527,10 +534,6 @@ class AppState: ObservableObject {
             }
         } else {
             currentUpdateText = "[\(app.name)] All data already exists!"
-        }
-
-        if selectedApp?.path == app.path {
-            selectedApp = apps[index]
         }
 
         currentUpdateText = "Valmis! (\(lastRequestDuration)ms)"
@@ -815,11 +818,6 @@ class AppState: ObservableObject {
 
             updated += 1
 
-            // Update selected app if it's the one being processed
-            if selectedApp?.path == app.path {
-                selectedApp = apps[appIndex]
-            }
-
             // Small delay between apps
             try? await Task.sleep(nanoseconds: 300_000_000)
         }
@@ -913,11 +911,6 @@ class AppState: ObservableObject {
                     database.updateFunctions(for: app.path, functions: functionsResult.functions)
                     lastRequestDuration = functionsResult.durationMs
                 }
-            }
-
-            // Update selected app if it's the one being processed
-            if selectedApp?.path == app.path {
-                selectedApp = apps[appIndex]
             }
 
             // Small delay between API calls
