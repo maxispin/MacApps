@@ -347,19 +347,24 @@ class AppState: ObservableObject {
         currentUpdateText = "[\(app.name)] Generating all data..."
         lastRequestDuration = 0
 
-        guard let index = apps.firstIndex(where: { $0.path == app.path }) else {
-            showProgressSheet = false
-            return
+        let replaced = await regenerateAppData(app)
+
+        if replaced {
+            currentUpdateText = "Done! (\(lastRequestDuration)ms)"
+        } else {
+            currentUpdateText = "[\(app.name)] No data received, existing data kept"
         }
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        showProgressSheet = false
+        currentUpdateText = ""
+    }
 
-        // Clear existing data
-        apps[index].descriptions = nil
-        apps[index].categories = []
-        apps[index].functions = []
-        apps[index].pricing = .unknown
-        apps[index].subcategory = nil
+    /// Fetch everything for one app in a single Claude call and replace existing data.
+    /// Existing data is only cleared AFTER a usable result arrives. Returns false if nothing was replaced.
+    @discardableResult
+    private func regenerateAppData(_ app: AppInfo) async -> Bool {
+        guard let index = apps.firstIndex(where: { $0.path == app.path }) else { return false }
 
-        // SINGLE Claude call for ALL data
         let languages = AppDatabase.targetLanguages
         let result = await Task.detached(priority: .userInitiated) { [claude] in
             return claude.generateAllDataWithTiming(for: app.name, bundleId: app.bundleIdentifier, languages: languages)
@@ -368,71 +373,54 @@ class AppState: ObservableObject {
         lastRequestDuration = result.durationMs
         currentUpdateText = "[\(app.name)] Received data in \(result.durationMs)ms"
 
-        // Apply category
-        if let category = result.category {
-            apps[index].categories = [category]
-            database.updateCategories(for: app.path, categories: [category])
-        }
+        guard !result.isEmpty else { return false }
 
-        // Apply subcategory
+        // Replace data now that we have a result
+        let categories = result.category.map { [$0] } ?? []
+        apps[index].categories = categories
+        database.updateCategories(for: app.path, categories: categories)
+
         if let subcategory = result.subcategory {
             apps[index].subcategory = subcategory
             database.updateSubcategory(for: app.path, subcategory: subcategory)
         }
 
-        // Apply pricing
-        if let pricing = result.pricing {
-            apps[index].pricing = pricing
-            database.updatePricing(for: app.path, pricing: pricing)
+        let pricing = result.pricing ?? .unknown
+        apps[index].pricing = pricing
+        database.updatePricing(for: app.path, pricing: pricing)
+
+        // Keep old functions if the new answer has none
+        if !result.functions.isEmpty {
+            apps[index].functions = result.functions
+            database.updateFunctions(for: app.path, functions: result.functions)
         }
 
-        // Apply descriptions
-        var allDescriptions: [AppDatabase.LocalizedDescription] = []
-        var finderComment: String? = nil
-        let systemLang = AppDatabase.systemLanguage
-
-        for (lang, desc) in result.descriptions {
-            let localizedDesc = AppDatabase.LocalizedDescription(
-                language: lang,
-                shortDescription: desc.short,
-                expandedDescription: desc.expanded,
-                fetchedAt: Date()
-            )
-            allDescriptions.append(localizedDesc)
-            database.updateDescription(for: app.path, language: lang, short: desc.short, expanded: desc.expanded)
-
-            // Build Finder comment from system language
-            if lang == systemLang, let short = desc.short {
-                if let expanded = desc.expanded {
-                    finderComment = String("\(short) | \(expanded)".prefix(255))
-                } else {
-                    finderComment = String(short.prefix(255))
-                }
+        // Keep old descriptions if the new answer has none
+        if !result.descriptions.isEmpty {
+            apps[index].descriptions = result.descriptions.map { lang, desc in
+                AppDatabase.LocalizedDescription(language: lang, shortDescription: desc.short, expandedDescription: desc.expanded, fetchedAt: Date())
             }
-        }
-
-        apps[index].descriptions = allDescriptions
-
-        // Write Finder comment
-        if let comment = finderComment {
-            let success = writer.setFinderComment(path: app.path, comment: comment)
-            if success {
-                apps[index].finderComment = comment
-                database.updateComment(for: app.path, comment: comment)
+            for (lang, desc) in result.descriptions {
+                database.updateDescription(for: app.path, language: lang, short: desc.short, expanded: desc.expanded)
             }
-            writer.indexForSpotlight(
-                path: app.path,
-                name: app.name,
-                bundleIdentifier: app.bundleIdentifier,
-                description: comment
-            )
-            lastGeneratedDescription = comment
+            writeFinderComment(for: app, at: index, descriptions: result.descriptions)
         }
 
-        currentUpdateText = "Done! (\(result.durationMs)ms)"
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        showProgressSheet = false
-        currentUpdateText = ""
+        return true
+    }
+
+    /// Build the Finder comment from the system-language description and write it
+    private func writeFinderComment(for app: AppInfo, at index: Int, descriptions: [String: (short: String?, expanded: String?)]) {
+        guard let desc = descriptions[AppDatabase.systemLanguage], let short = desc.short else { return }
+        let combined = desc.expanded.map { "\(short) | \($0)" } ?? short
+        let comment = String(combined.prefix(255))
+
+        if writer.setFinderComment(path: app.path, comment: comment) {
+            apps[index].finderComment = comment
+            database.updateComment(for: app.path, comment: comment)
+        }
+        writer.indexForSpotlight(path: app.path, name: app.name, bundleIdentifier: app.bundleIdentifier, description: comment)
+        lastGeneratedDescription = comment
     }
 
     /// Update single app - uses SINGLE optimized Claude call if any data missing
@@ -716,7 +704,7 @@ class AppState: ObservableObject {
         lastGeneratedDescription = ""
     }
 
-    /// Regenerate ALL data for ALL apps (force refresh everything)
+    /// Regenerate ALL data for ALL apps (force refresh everything), one Claude call per app
     func regenerateAllApps() async {
         shouldStopUpdate = false
         let total = apps.count
@@ -734,89 +722,18 @@ class AppState: ObservableObject {
                 updateStatus = .completed(updated: updated, skipped: total - index, failed: failed)
                 currentUpdateText = ""
                 lastGeneratedDescription = ""
+                database.save(apps: apps)
                 return
             }
 
             updateStatus = .updating(appName: app.name, current: index + 1, total: total)
+            currentUpdateText = "[\(app.name)] Generating all data..."
 
-            guard let appIndex = apps.firstIndex(where: { $0.path == app.path }) else {
+            if await regenerateAppData(app) {
+                updated += 1
+            } else {
                 failed += 1
-                continue
             }
-
-            // Clear existing data
-            apps[appIndex].descriptions = nil
-            apps[appIndex].categories = []
-            apps[appIndex].functions = []
-            apps[appIndex].pricing = .unknown
-            apps[appIndex].subcategory = nil
-
-            // Generate fresh descriptions
-            currentUpdateText = "[\(app.name)] Descriptions..."
-            let result = await generateMultiLanguageDescriptions(for: apps[appIndex])
-            apps[appIndex].descriptions = result.descriptions
-
-            if let finderComment = result.finderComment {
-                let success = writer.setFinderComment(path: app.path, comment: finderComment)
-                if success {
-                    apps[appIndex].finderComment = finderComment
-                    database.updateComment(for: app.path, comment: finderComment)
-                }
-                lastGeneratedDescription = finderComment
-                writer.indexForSpotlight(
-                    path: app.path,
-                    name: app.name,
-                    bundleIdentifier: app.bundleIdentifier,
-                    description: finderComment
-                )
-            }
-
-            // Generate category
-            currentUpdateText = "[\(app.name)] Category..."
-            let categoryResult = await Task.detached(priority: .userInitiated) { [claude] in
-                return claude.getCategoryWithTiming(for: app.name, bundleId: app.bundleIdentifier)
-            }.value
-
-            if let category = categoryResult.category {
-                apps[appIndex].categories = [category]
-                database.updateCategories(for: app.path, categories: [category])
-            }
-
-            // Generate functions
-            currentUpdateText = "[\(app.name)] Functions..."
-            let functionsResult = await Task.detached(priority: .userInitiated) { [claude] in
-                return claude.getFunctionsWithTiming(for: app.name, bundleId: app.bundleIdentifier, language: AppDatabase.systemLanguage)
-            }.value
-
-            if !functionsResult.functions.isEmpty {
-                apps[appIndex].functions = functionsResult.functions
-                database.updateFunctions(for: app.path, functions: functionsResult.functions)
-            }
-
-            // Generate pricing
-            currentUpdateText = "[\(app.name)] Pricing..."
-            let pricingResult = await Task.detached(priority: .userInitiated) { [claude] in
-                return claude.getPricingWithTiming(for: app.name, bundleId: app.bundleIdentifier)
-            }.value
-
-            if let pricing = pricingResult.pricing {
-                apps[appIndex].pricing = pricing
-                database.updatePricing(for: app.path, pricing: pricing)
-            }
-
-            // Generate subcategory
-            currentUpdateText = "[\(app.name)] Subcategory..."
-            let category = apps[appIndex].category
-            let subcategoryResult = await Task.detached(priority: .userInitiated) { [claude] in
-                return claude.getSubcategoryWithTiming(for: app.name, bundleId: app.bundleIdentifier, category: category, language: AppDatabase.systemLanguage)
-            }.value
-
-            if let subcategory = subcategoryResult.subcategory {
-                apps[appIndex].subcategory = subcategory
-                database.updateSubcategory(for: app.path, subcategory: subcategory)
-            }
-
-            updated += 1
 
             // Small delay between apps
             try? await Task.sleep(nanoseconds: 300_000_000)

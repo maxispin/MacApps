@@ -49,7 +49,7 @@ struct MacAppsApp: App {
     @StateObject private var fontSettings = FontSettings.shared
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    static let version = "0.5.0.3"
+    static let version = "0.5.1.0"
     static let buildDate = "2026-06-01"
 
     var body: some Scene {
@@ -68,6 +68,13 @@ struct MacAppsApp: App {
                     }
                 }
                 .keyboardShortcut("r", modifiers: .command)
+
+                Divider()
+
+                Button("Regenerate All Data...") {
+                    appState.showRegenerateAllSheet = true
+                }
+                .disabled(!appState.claudeAvailable || appState.isUpdating)
             }
             CommandGroup(after: .sidebar) {
                 Button("Increase Font Size") {

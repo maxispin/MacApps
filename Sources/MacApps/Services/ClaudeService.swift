@@ -48,6 +48,13 @@ final class ClaudeService: Sendable {
         claudePath != nil
     }
 
+    /// Keep only characters that can appear in an app name; strips quotes, newlines and control characters
+    private static func sanitizeForPrompt(_ text: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: " .-_+&()"))
+        let cleaned = text.unicodeScalars.filter { allowed.contains($0) }
+        return String(String.UnicodeScalarView(cleaned)).trimmingCharacters(in: .whitespaces)
+    }
+
     /// Result with timing info
     struct DescriptionResult {
         let text: String?
@@ -83,26 +90,35 @@ final class ClaudeService: Sendable {
         let category: AppCategory?
         let subcategory: String?
         let pricing: AppPricing?
+        let functions: [String]
         let descriptions: [String: (short: String?, expanded: String?)]  // language -> descriptions
         let durationMs: Int
+
+        static func empty(durationMs: Int = 0) -> UnifiedAppData {
+            UnifiedAppData(category: nil, subcategory: nil, pricing: nil, functions: [], descriptions: [:], durationMs: durationMs)
+        }
+
+        /// True when Claude returned nothing usable (caller should keep existing data)
+        var isEmpty: Bool {
+            category == nil && subcategory == nil && pricing == nil && functions.isEmpty && descriptions.isEmpty
+        }
     }
 
     /// Generate ALL app data in a single Claude call (optimized)
     func generateAllDataWithTiming(for appName: String, bundleId: String?, languages: [String]) -> UnifiedAppData {
         guard let path = claudePath else {
-            return UnifiedAppData(category: nil, subcategory: nil, pricing: nil, descriptions: [:], durationMs: 0)
+            return .empty()
         }
 
         let startTime = CFAbsoluteTimeGetCurrent()
-        let escapedName = appName.replacingOccurrences(of: "'", with: "\\'")
-
-        // Build language list for prompt (used in dynamic prompt building below)
+        let escapedName = Self.sanitizeForPrompt(appName)
+        let functionsLang = languageName(for: AppDatabase.systemLanguage)
 
         var prompt = """
         Analyze the Mac application '\(escapedName)'
         """
         if let bundleId = bundleId {
-            prompt += " (bundle id: \(bundleId))"
+            prompt += " (bundle id: \(Self.sanitizeForPrompt(bundleId)))"
         }
         prompt += """
         .
@@ -112,6 +128,7 @@ final class ClaudeService: Sendable {
           "category": "ONE of: Productivity, Development, Design, Media, Communication, Utilities, Games, Finance, Education, System, Other",
           "subcategory": "ONE WORD describing main function (e.g., Email, IDE, Browser, Editor)",
           "pricing": "ONE of: Free, Freemium, Paid, Subscription, Open Source, Unknown",
+          "functions": ["5-15 actions in \(functionsLang). Each item: verb + object, comma, noun form. e.g. 'edit images, image editing'"],
           "descriptions": {
         """
 
@@ -121,7 +138,7 @@ final class ClaudeService: Sendable {
 
             "\(lang)": {
               "short": "5-10 word description in \(langName)",
-              "expanded": "20-50 word description in \(langName) using ALL 255 characters"
+              "expanded": "20-40 word description in \(langName), at most 190 characters"
             }
         """
             if index < languages.count - 1 {
@@ -153,39 +170,35 @@ final class ClaudeService: Sendable {
 
         do {
             try process.run()
+            // Read before waiting so a large response cannot fill the pipe and deadlock
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
 
             let durationMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
 
-            if process.terminationStatus == 0 {
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                if let output = String(data: data, encoding: .utf8) {
-                    return parseUnifiedResponse(output, durationMs: durationMs)
-                }
+            if process.terminationStatus == 0, let output = String(data: data, encoding: .utf8) {
+                return parseUnifiedResponse(output, durationMs: durationMs)
             }
-            return UnifiedAppData(category: nil, subcategory: nil, pricing: nil, descriptions: [:], durationMs: durationMs)
+            return .empty(durationMs: durationMs)
         } catch {
             let durationMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
-            return UnifiedAppData(category: nil, subcategory: nil, pricing: nil, descriptions: [:], durationMs: durationMs)
+            return .empty(durationMs: durationMs)
         }
     }
 
     /// Parse the unified JSON response
     private func parseUnifiedResponse(_ text: String, durationMs: Int) -> UnifiedAppData {
-        // Extract JSON from response (handle markdown code blocks)
-        var jsonText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        // Remove markdown code block if present
-        if jsonText.hasPrefix("```") {
-            if let startIndex = jsonText.firstIndex(of: "{"),
-               let endIndex = jsonText.lastIndex(of: "}") {
-                jsonText = String(jsonText[startIndex...endIndex])
-            }
+        // Extract the outermost JSON object regardless of surrounding prose or code fences
+        guard let startIndex = text.firstIndex(of: "{"),
+              let endIndex = text.lastIndex(of: "}"),
+              startIndex < endIndex else {
+            return .empty(durationMs: durationMs)
         }
+        let jsonText = String(text[startIndex...endIndex])
 
         guard let jsonData = jsonText.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
-            return UnifiedAppData(category: nil, subcategory: nil, pricing: nil, descriptions: [:], durationMs: durationMs)
+            return .empty(durationMs: durationMs)
         }
 
         // Parse category
@@ -207,6 +220,12 @@ final class ClaudeService: Sendable {
             pricing = nil
         }
 
+        // Parse functions
+        var functions: [String] = []
+        if let list = json["functions"] as? [String] {
+            functions = parseFunctions(from: list.joined(separator: "\n"))
+        }
+
         // Parse descriptions
         var descriptions: [String: (short: String?, expanded: String?)] = [:]
         if let descs = json["descriptions"] as? [String: [String: String]] {
@@ -219,6 +238,7 @@ final class ClaudeService: Sendable {
             category: category,
             subcategory: subcategory,
             pricing: pricing,
+            functions: functions,
             descriptions: descriptions,
             durationMs: durationMs
         )

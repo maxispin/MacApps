@@ -71,7 +71,6 @@ struct DetailView: View {
                         .padding(.bottom, 4)
 
                     ActionRow(icon: "sparkles", title: "Update All", description: "Generate descriptions for apps missing data")
-                    ActionRow(icon: "arrow.triangle.2.circlepath", title: "Regenerate All", description: "Force regenerate all data for all apps")
                     ActionRow(icon: "tag", title: "Categorize", description: "Assign categories to uncategorized apps")
                     ActionRow(icon: "arrow.clockwise", title: "Scan", description: "Rescan application folders for new apps")
                 }
@@ -150,6 +149,7 @@ struct DescriptionSection: View {
     @Binding var isUpdating: Bool
     @Binding var showSuccess: Bool
     @Binding var showError: Bool
+    @State private var showRegenerateConfirmation = false
 
     private func languageName(for code: String) -> String {
         switch code {
@@ -264,20 +264,32 @@ struct DescriptionSection: View {
                 // Regenerate button for existing data
                 if app.hasDescription || !app.categories.isEmpty || !app.functions.isEmpty {
                     Button(action: {
-                        Task {
-                            isUpdating = true
-                            await appState.regenerateApp(app)
-                            isUpdating = false
-                            showSuccess = true
-                        }
+                        showRegenerateConfirmation = true
                     }) {
                         HStack {
                             Image(systemName: "arrow.clockwise")
-                            Text("Regenerate")
+                            Text("Regenerate...")
                         }
                     }
-                    .help("Force regenerate all data (descriptions, category, functions) even if they already exist.")
+                    .help("Replace all data for this app (descriptions, category, functions, pricing). Asks for confirmation.")
                     .disabled(isUpdating || !appState.claudeAvailable)
+                    .confirmationDialog(
+                        "Replace all data for \(app.name)?",
+                        isPresented: $showRegenerateConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Replace Data", role: .destructive) {
+                            Task {
+                                isUpdating = true
+                                await appState.regenerateApp(app)
+                                isUpdating = false
+                                showSuccess = true
+                            }
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("Existing descriptions, category, functions, pricing and the Finder comment are overwritten with new AI output.")
+                    }
                 }
 
                 Spacer()

@@ -26,14 +26,6 @@ struct ToolbarView: ToolbarContent {
             .disabled(!appState.claudeAvailable || appState.scanStatus == .scanning || appState.isUpdating)
 
             Button(action: {
-                appState.showRegenerateAllSheet = true
-            }) {
-                Label("Regenerate All", systemImage: "arrow.triangle.2.circlepath")
-            }
-            .help("Force regenerate ALL data for ALL apps (descriptions, categories, functions, pricing). Warning: This will take a long time!")
-            .disabled(!appState.claudeAvailable || appState.scanStatus == .scanning || appState.isUpdating)
-
-            Button(action: {
                 Task {
                     await appState.categorizeAllApps()
                 }
@@ -356,6 +348,11 @@ struct UpdateProgressView: View {
 
 struct RegenerateAllSheet: View {
     @EnvironmentObject var appState: AppState
+    @State private var confirmationText = ""
+
+    private var isConfirmed: Bool {
+        confirmationText.trimmingCharacters(in: .whitespaces) == "\(appState.apps.count)"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -396,14 +393,21 @@ struct RegenerateAllSheet: View {
                                 .fontWeight(.medium)
                                 .padding(.top, 4)
 
-                            Text("• Delete all existing descriptions, categories, functions, and pricing")
-                            Text("• Generate fresh data for every app")
-                            Text("• Take approximately \(appState.apps.count * 10 / 60) minutes")
-                            Text("• Make ~\(appState.apps.count * 6) API calls to Claude")
+                            Text("• Overwrite ALL existing descriptions, categories, functions, and pricing")
+                            Text("• Overwrite Finder comments on every app")
+                            Text("• Take approximately \(max(1, appState.apps.count * 8 / 60)) minutes")
+                            Text("• Make \(appState.apps.count) calls to Claude (one per app)")
+                            Text("• This cannot be undone")
                         }
                         .font(.caption2)
                         .foregroundColor(.secondary)
                     }
+
+                    Text("To confirm, type the number of apps (\(appState.apps.count)):")
+                        .font(.callout)
+                    TextField("Number of apps", text: $confirmationText)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 120)
 
                 }
                 .padding(24)
@@ -437,20 +441,22 @@ struct RegenerateAllSheet: View {
                         appState.showRegenerateAllSheet = false
                     }
                     .keyboardShortcut(.cancelAction)
+                    .buttonStyle(.borderedProminent)
 
                     Spacer()
 
-                    Button("Regenerate All") {
+                    Button("Overwrite All Data") {
                         Task {
                             await appState.regenerateAllApps()
                         }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.orange)
+                    .tint(.red)
+                    .disabled(!isConfirmed)
+                    .help("Enabled only after typing the app count above")
                 }
             }
             .padding(16)
         }
-        .frame(width: 500, height: 400)
+        .frame(width: 520, height: 480)
     }
 }

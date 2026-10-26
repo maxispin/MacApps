@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1.0] - 2026-10-26
+
+### Changed
+- **Regenerate All moved out of the toolbar**: now under the app menu as "Regenerate All Data...", and the sheet requires typing the app count before the red "Overwrite All Data" button enables; Cancel is the default button
+- **Single-app Regenerate asks for confirmation** before replacing data
+- **Regenerate All uses the unified Claude call**: one call per app instead of up to eight; functions are now part of the unified JSON response
+- **Expanded descriptions capped at ~190 characters** so "short | expanded" fits the 255-char Finder comment without truncation
+
+### Fixed
+- **No data loss on failed regeneration**: existing descriptions, categories, functions and pricing are cleared only after Claude returns a usable result; stopping Regenerate All now saves the database
+- **Claude CLI output is read before waiting for exit**, avoiding a pipe deadlock on large responses
+- **JSON extraction** works even when Claude adds text before the code block
+- **App names are sanitized** before being placed in prompts
+- Removed "Regenerate All" from the empty detail view's action list
+
 ## [0.5.0.3] - 2026-10-26
 
 ### Fixed
