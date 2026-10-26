@@ -126,14 +126,13 @@ struct BatchUpdateSheet: View {
 
             Divider()
 
+            ScrollView {
             if appState.isUpdating {
                 // Progress view
                 UpdateProgressView()
-                    .frame(maxHeight: .infinity)
             } else if case .completed = appState.updateStatus {
                 // Completed view
                 UpdateProgressView()
-                    .frame(maxHeight: .infinity)
             } else {
                 // Options view
                 VStack(alignment: .leading, spacing: 16) {
@@ -165,10 +164,11 @@ struct BatchUpdateSheet: View {
                         .foregroundColor(.secondary)
                     }
 
-                    Spacer()
                 }
                 .padding(24)
             }
+            }
+            .frame(maxHeight: .infinity)
 
             Divider()
 
@@ -213,7 +213,7 @@ struct BatchUpdateSheet: View {
             }
             .padding(16)
         }
-        .frame(width: 500, height: 450)
+        .frame(width: 520, height: 480)
     }
 }
 
@@ -378,12 +378,11 @@ struct RegenerateAllSheet: View {
 
             Divider()
 
+            ScrollView {
             if appState.isUpdating {
                 UpdateProgressView()
-                    .frame(maxHeight: .infinity)
             } else if case .completed = appState.updateStatus {
                 UpdateProgressView()
-                    .frame(maxHeight: .infinity)
             } else {
                 VStack(alignment: .leading, spacing: 16) {
                     GroupBox {
@@ -406,10 +405,11 @@ struct RegenerateAllSheet: View {
                         .foregroundColor(.secondary)
                     }
 
-                    Spacer()
                 }
                 .padding(24)
             }
+            }
+            .frame(maxHeight: .infinity)
 
             Divider()
 

@@ -49,7 +49,7 @@ struct MacAppsApp: App {
     @StateObject private var fontSettings = FontSettings.shared
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    static let version = "0.5.0.2"
+    static let version = "0.5.0.3"
     static let buildDate = "2026-06-01"
 
     var body: some Scene {
