@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0.2] - 2026-10-26
+
+### Added
+- **App icon**: Rounded blue/indigo tile with a 2x2 app grid and sparkle (`Sources/MacApps/Resources/MacApps.icns`), set as Dock icon at launch and as `CFBundleIconFile` in the app bundle; regenerate with `swift Scripts/make-icon.swift`
+
 ## [0.5.0.1] - 2026-06-01
 
 ### Fixed

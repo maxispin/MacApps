@@ -49,7 +49,7 @@ struct MacAppsApp: App {
     @StateObject private var fontSettings = FontSettings.shared
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    static let version = "0.5.0.1"
+    static let version = "0.5.0.2"
     static let buildDate = "2026-06-01"
 
     var body: some Scene {
@@ -217,6 +217,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Ensure app appears in Dock
         NSApp.setActivationPolicy(.regular)
+        // Dock icon (also used when running the bare executable from .build)
+        if let iconURL = Bundle.module.url(forResource: "MacApps", withExtension: "icns"),
+           let icon = NSImage(contentsOf: iconURL) {
+            NSApp.applicationIconImage = icon
+        }
         // Bring to front
         NSApp.activate(ignoringOtherApps: true)
     }
